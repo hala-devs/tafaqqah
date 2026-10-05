@@ -16,4 +16,10 @@ else
   echo "[bootstrap] database check failed" >&2
   exit "$status"
 fi
+if [ -n "${ADMIN_EMAIL:-}" ] && [ -n "${ADMIN_PASSWORD:-}" ]; then
+  echo "[bootstrap] ensuring configured application admin exists"
+  npx tsx scripts/bootstrap-admin.ts
+else
+  echo "[bootstrap] no application admin bootstrap credentials configured — skipping"
+fi
 echo "[bootstrap] done"
