@@ -1,0 +1,63 @@
+{
+  "name": "tafaqqah",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "postinstall": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:reset": "prisma migrate reset",
+    "admin:promote": "tsx scripts/promote-admin.ts",
+    "quotes": "tsx scripts/quotes.ts",
+    "content:reconcile-lesson-01": "tsx scripts/reconcile-lesson-akhsar-01.ts",
+    "content:matn-report": "tsx scripts/matn-report.ts",
+    "content:import-matn": "tsx scripts/import-matn.ts",
+    "content:build-matn": "tsx scripts/build-matn-akhsar.ts",
+    "content:replace-matn": "tsx scripts/replace-matn.ts",
+    "test:e2e": "playwright test",
+    "measure:latency": "tsx scripts/measure-latency.ts",
+    "verify:gemini-lesson-1": "tsx --conditions=react-server scripts/real-gemini-lesson1.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "@google/genai": "^2.27.0",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "lucide-react": "^1.49.0",
+    "next": "16.3.8",
+    "pg": "^8.23.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^22.20.4",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^18.0.5",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.8",
+    "prisma": "^7.10.0",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.0.3"
+  },
+  "description": "Tafaqqah | تفقّه — source-grounded adaptive assessment for structured Hanbali fiqh learning",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.9"
+  }
+}

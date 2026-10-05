@@ -1,0 +1,104 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files — secrets never get committed; the template is the exception
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# generated Prisma client
+/src/generated/prisma
+
+# local tooling
+.agents/
+.windsurf/
+skills-lock.json
+
+# end-to-end artifacts
+/e2e-artifacts
+/playwright-report
+/test-results
+
+# second dev server / verification build (NEXT_DIST_DIR)
+/.next-*/
+
+# logs, dumps, local databases
+*.log
+*.dump
+*.backup
+*.sql.gz
+*.sqlite
+*.sqlite3
+*.db
+
+# editors / OS / scratch
+.vscode/
+.idea/
+.claude/
+Thumbs.db
+desktop.ini
+*.swp
+*~
+*.tmp
+*.bak
+/tmp/
+/private/
+
+# ── Private content: stays on the maintainer's machine, never published (see docs/ATTRIBUTION.md) ──
+# Source PDFs/scans (redistribution rights not established) and text extracted from them
+*.pdf
+/content/**/*.png
+/content/**/*.jpg
+/content/**/*.jpeg
+/content/**/*.tif
+/content/**/*.tiff
+/content/*.pdf.txt
+/content/*.pdf.clean.txt
+# Raw third-party timed transcripts (one-off import inputs)
+/content/*.srt
+# Lesson 2 DRAFT pipeline: internal scientific review report, HUMAN_REVIEW_REQUIRED notes and raw extracts.
+# Lesson 2 is not in the release seed; the app, build, Docker image and seed need none of these files.
+*.review-report.md
+/content/lesson-akhsar-02.*
+/scripts/data/lesson-akhsar-02.*
+/scripts/build-lesson-two.ts
+/scripts/clean-pdf-lesson-two.ts
+/scripts/extract-pdf-lesson-two.ts
+/scripts/import-lesson-two.ts
+/scripts/verify-lesson-two.ts
+/tests/lesson-two-import.test.ts
+# Superseded draft segmentation audit (internal; regenerated locally by `npm run content:matn-report`)
+/docs/matn-akhsar-segmentation-report.md

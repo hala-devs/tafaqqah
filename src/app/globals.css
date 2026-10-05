@@ -1,0 +1,301 @@
+@import "tailwindcss";
+
+/* ──────────────────────────────────────────────────────────────
+   Tafaqqah design tokens — "رحلة علم"
+   Every colour, radius, shadow, type size and motion value used
+   by components comes from here. Avoid arbitrary values in pages.
+   ────────────────────────────────────────────────────────────── */
+@theme {
+  /* Reset Tailwind's default palette so only Tafaqqah tokens exist. */
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* Knowledge — deep ink navy */
+  --color-ink: #17233c;
+  --color-ink-dark: #101827;
+  --color-ink-soft: #2a3856;
+  --color-ink-tint: #e8ebf1;
+
+  /* Progress & mastery — muted sage */
+  --color-sage: #789783;
+  --color-sage-dark: #526f5c;
+  --color-sage-deep: #45604f;
+  --color-sage-soft: #e6eee8;
+
+  /* Warm paper surfaces */
+  --color-paper: #f8f5ee;
+  --color-surface: #fffdf8;
+  --color-surface-2: #f0ece2;
+
+  /* Premium detail — use sparingly */
+  --color-gold: #b99a5e;
+  --color-gold-ink: #85683a;
+  --color-gold-soft: #f4eddf;
+
+  /* Text */
+  --color-text: #172033;
+  /* Spec #667085 darkened slightly to pass WCAG AA (4.5:1) on paper backgrounds. */
+  --color-muted: #5e6679;
+  --color-faint: #8a8f9c;
+
+  /* Lines */
+  --color-line: #e4ded2;
+  --color-line-strong: #d3cab8;
+
+  /* Feedback (base = fills/icons, -ink = text-safe, -soft = tinted backgrounds) */
+  --color-success: #568267;
+  --color-success-ink: #3f664d;
+  --color-success-soft: #e6efe8;
+  --color-warning: #b98546;
+  --color-warning-ink: #87602c;
+  --color-warning-soft: #f6ecdc;
+  --color-error: #a95858;
+  --color-error-ink: #8b4242;
+  --color-error-soft: #f6e5e3;
+
+  /* Typography */
+  --font-sans: var(--font-plex-arabic), var(--font-plex-latin), "IBM Plex Sans Arabic", "Noto Sans Arabic", system-ui, sans-serif;
+  --font-naskh: var(--font-naskh-arabic), "Noto Naskh Arabic", "Amiri", serif;
+
+  --text-display: 3.25rem;
+  --text-display--line-height: 1.3;
+  --text-display-sm: 2.375rem;
+  --text-display-sm--line-height: 1.35;
+  --text-title: 1.875rem;
+  --text-title--line-height: 1.5;
+  --text-section: 1.3125rem;
+  --text-section--line-height: 1.65;
+  --text-card: 1.0625rem;
+  --text-card--line-height: 1.7;
+  --text-body: 1rem;
+  --text-body--line-height: 1.9;
+  --text-small: 0.9063rem;
+  --text-small--line-height: 1.8;
+  --text-caption: 0.84375rem;
+  --text-caption--line-height: 1.7;
+  --text-question: 1.3125rem;
+  --text-question--line-height: 2;
+  --text-question-lg: 1.4375rem;
+  --text-question-lg--line-height: 1.95;
+  --text-micro: 0.78125rem;
+  --text-micro--line-height: 1.5;
+  --text-logo: 1.65rem;
+  --text-logo--line-height: 1;
+  --text-wordmark: 4.25rem;
+  --text-wordmark--line-height: 1.35;
+  --text-wordmark-lg: 5.5rem;
+  --text-wordmark-lg--line-height: 1.3;
+  --text-quote: 1.75rem;
+  --text-quote--line-height: 1.9;
+  --text-quote-lg: 2.25rem;
+  --text-quote-lg--line-height: 1.85;
+  --text-matn: 1.3125rem;
+  --text-matn--line-height: 2.25;
+
+  /* Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.375rem;
+  --radius-2xl: 1.75rem;
+  --radius-full: 9999px;
+
+  /* Elevation — soft, warm, only when needed */
+  --shadow-soft: 0 1px 2px rgb(23 35 60 / 0.04), 0 6px 18px -10px rgb(23 35 60 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(23 35 60 / 0.05), 0 18px 40px -18px rgb(23 35 60 / 0.22);
+  --shadow-focus: 0 0 0 3px rgb(120 151 131 / 0.45);
+
+  /* Motion */
+  --ease-calm: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 150ms;
+  --duration-base: 220ms;
+  --duration-slow: 300ms;
+
+  --animate-fade-up: fade-up 300ms var(--ease-calm) both;
+  --animate-fade-in: fade-in 220ms var(--ease-calm) both;
+  --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;
+  --animate-draw: draw 500ms var(--ease-calm) both;
+  --animate-bar-fill: bar-fill 800ms var(--ease-calm) both;
+  --animate-ring-fill: ring-fill 1000ms var(--ease-calm) both;
+  --animate-pop-in: pop-in 520ms var(--ease-calm) both;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes pulse-soft {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+  @keyframes bar-fill {
+    from {
+      width: var(--bar-from, 0%);
+    }
+    to {
+      width: var(--bar-to, 100%);
+    }
+  }
+  @keyframes ring-fill {
+    from {
+      stroke-dashoffset: var(--ring-from);
+    }
+    to {
+      stroke-dashoffset: var(--ring-to);
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes draw {
+    from {
+      stroke-dashoffset: var(--dash, 300);
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    background: var(--color-paper);
+    color: var(--color-text);
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    min-height: 100dvh;
+    background: var(--color-paper);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  /* Page and section headings carry the hierarchy; card headings stay at 600. */
+  h1,
+  h2 {
+    font-weight: 700;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: var(--color-sage-soft);
+    color: var(--color-ink-dark);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  [id] {
+    scroll-margin-top: 6rem;
+  }
+}
+
+@layer components {
+  /* Subtle 8-fold lattice — Islamic geometric proportion, rendered almost invisibly. */
+  .bg-geometric {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%2317233C' stroke-width='0.7' opacity='0.085'%3E%3Crect x='23' y='23' width='26' height='26'/%3E%3Crect x='23' y='23' width='26' height='26' transform='rotate(45 36 36)'/%3E%3Cpath d='M0 36h9M63 36h9M36 0v9M36 63v9'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 72px 72px;
+  }
+
+  /* The one hero surface of the student home: deep ink with a soft sage glow and the faint lattice. */
+  .hero-surface {
+    background-color: var(--color-ink);
+    background-image:
+      radial-gradient(90% 120% at 0% 0%, color-mix(in srgb, var(--color-sage) 26%, transparent), transparent 62%),
+      radial-gradient(70% 90% at 100% 100%, color-mix(in srgb, var(--color-gold) 12%, transparent), transparent 60%);
+  }
+
+  /* Manuscript-style double rule used to frame trusted source material. */
+  .rule-manuscript {
+    border-inline-start: 3px double color-mix(in srgb, var(--color-gold) 70%, transparent);
+  }
+
+  /* Highlight a lesson section when reached from a review link. */
+  .target-highlight:target {
+    animation: target-glow 2.4s var(--ease-calm) both;
+  }
+  /* The admin verifier uses this only to bring the selected concept's existing transcript passage into view. */
+  .concept-passage-highlight {
+    border-color: var(--color-gold) !important;
+    background: var(--color-gold-soft) !important;
+    box-shadow: var(--shadow-focus);
+    animation: concept-passage-glow 2.8s var(--ease-calm) both;
+  }
+  @keyframes target-glow {
+    0% {
+      background: var(--color-gold-soft);
+    }
+    100% {
+      background: transparent;
+    }
+  }
+  @keyframes concept-passage-glow {
+    0%, 30% {
+      box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-gold) 34%, transparent), var(--shadow-focus);
+    }
+    100% {
+      box-shadow: var(--shadow-focus);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

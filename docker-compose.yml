@@ -1,0 +1,64 @@
+# Tafaqqah | تفقّه — full stack: PostgreSQL → one-off migrations/seed → app.
+#
+#   cp .env.example .env          # then edit values
+#   docker compose up --build     # → http://localhost:${APP_PORT:-3000}
+#
+# The database is not published on a host port (no clash with a local PostgreSQL). Data lives in the
+# named volume `tafaqqah-pg`; `docker compose down -v` deletes it.
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tafaqqah}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-tafaqqah}
+    volumes:
+      - tafaqqah-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    build:
+      context: .
+      target: migrate
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tafaqqah}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tafaqqah}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tafaqqah}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tafaqqah}
+      AI_PROVIDER: ${AI_PROVIDER:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_GENERATOR_MODEL: ${AI_GENERATOR_MODEL:-}
+      AI_VALIDATOR_MODEL: ${AI_VALIDATOR_MODEL:-}
+      AI_GENERATOR_EFFORT: ${AI_GENERATOR_EFFORT:-}
+      AI_VALIDATOR_EFFORT: ${AI_VALIDATOR_EFFORT:-}
+      AI_RATE_LIMIT_PER_10_MIN: ${AI_RATE_LIMIT_PER_10_MIN:-}
+      ASSESSMENT_MODE_STRATEGY: ${ASSESSMENT_MODE_STRATEGY:-adaptive}
+      REINFORCEMENT_BASELINE_USER_IDS: ${REINFORCEMENT_BASELINE_USER_IDS:-}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  tafaqqah-pg:

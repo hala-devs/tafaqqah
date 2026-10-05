@@ -1,0 +1,1005 @@
+// Tafaqqah | تفقّه — relational schema
+//
+// Core traceability chain (see README → "Traceability"):
+//   GeneratedQuestion → SourcePassage (+ sourceVersion + sourceSnapshot)
+//                     → Concept → Lesson
+//                     → AIInteractionLog (generator + validator calls, model, prompt version)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Identity ─────────────────────────────
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+/// Assessment arm used for the fixed-vs-adaptive comparison.
+enum EvaluationGroup {
+  ADAPTIVE
+  FIXED
+}
+
+model User {
+  id              String          @id @default(cuid())
+  email           String          @unique
+  name            String
+  passwordHash    String
+  role            Role            @default(STUDENT)
+  evaluationGroup EvaluationGroup @default(ADAPTIVE)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  authSessions        AuthSession[]
+  lessonProgress      LessonProgress[]
+  assessmentSessions  AssessmentSession[]
+  answers             StudentAnswer[]
+  masteries           ConceptMastery[]
+  feedback            LearnerFeedback[]
+  measurements        LessonMeasurement[]
+  settings            LearnerSettings?
+  learningDays        LearningDay[]
+  recitationAttempts  RecitationAttempt[]
+  memorizationMastery MemorizationMastery[]
+  memorizationGoal    MemorizationGoal?
+  memorizationCredits MemorizationGoalCredit[]
+  reinforcementPlans  MemorizationReinforcementPlan[]
+}
+
+/// Server-side login session. Only a SHA-256 hash of the cookie token is stored.
+model AuthSession {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ───────────────────────────── Curriculum ─────────────────────────────
+
+/// A multi-level learning path (e.g. the Hanbali fiqh path). Only ACTIVE levels have
+/// openable content; COMING_SOON levels are shown on the roadmap as future stages.
+model LearningPath {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  order       Int      @default(0)
+  isSample    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  levels      Level[]
+}
+
+enum LevelStatus {
+  ACTIVE
+  COMING_SOON
+}
+
+model Level {
+  id          String       @id @default(cuid())
+  pathId      String
+  order       Int
+  title       String
+  description String?
+  status      LevelStatus  @default(COMING_SOON)
+  path        LearningPath @relation(fields: [pathId], references: [id], onDelete: Cascade)
+  courses     Course[]
+
+  @@unique([pathId, order])
+}
+
+enum LessonStatus {
+  DRAFT // hidden from students
+  COMING_SOON // visible on the path as "قيد الإعداد", not openable
+  PUBLISHED
+}
+
+/// A book / course inside a level (Level 1 → «أخصر المختصرات»).
+model Course {
+  id           String        @id @default(cuid())
+  levelId      String?
+  level        Level?        @relation(fields: [levelId], references: [id], onDelete: SetNull)
+  slug         String        @unique
+  title        String
+  description  String
+  madhhab      String
+  order        Int           @default(0)
+  /// Development seed content — must be replaced with verified material.
+  isSample     Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  chapters     Chapter[]
+  /// «حفظ المتن»: the memorization hierarchy belongs to the course/book, never to an explanation lesson.
+  matnSections MatnSection[]
+}
+
+model Chapter {
+  id          String   @id @default(cuid())
+  courseId    String
+  title       String
+  description String?
+  order       Int
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons     Lesson[]
+
+  @@index([courseId, order])
+}
+
+model Lesson {
+  id                 String       @id @default(cuid())
+  chapterId          String
+  title              String
+  description        String
+  objectives         String[]
+  order              Int
+  status             LessonStatus @default(DRAFT)
+  isSample           Boolean      @default(false)
+  estimatedMinutes   Int?
+  /// When true, learners take a pre-test before studying and are offered a post-test.
+  measurementEnabled Boolean      @default(false)
+  /// PDF text of this lesson that has no verified video timestamp yet (PDF_ONLY_UNTIMED).
+  /// Never a SourcePassage: it cannot reach learners or the AI until it is mapped to a verified timestamp.
+  pdfOnlyUntimedText String?
+  pdfOnlyUntimedNote String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  chapter            Chapter             @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  concepts           Concept[]
+  passages           SourcePassage[]
+  progress           LessonProgress[]
+  assessmentSessions AssessmentSession[]
+  fixedQuestions     FixedQuestion[]
+  generatedQuestions GeneratedQuestion[]
+  measurements       LessonMeasurement[]
+
+  @@index([chapterId, order])
+}
+
+model Concept {
+  id                String    @id @default(cuid())
+  lessonId          String
+  title             String
+  description       String
+  order             Int
+  /// Optional review video for this concept. Timestamps are entered by a human and only
+  /// used once `videoApproved` is true — the AI never produces or edits them.
+  videoUrl          String?
+  videoStartSecond  Int?
+  videoEndSecond    Int?
+  videoApproved     Boolean   @default(false)
+  videoApprovedAt   DateTime?
+  videoApprovedById String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  lesson             Lesson              @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  passages           SourcePassage[]
+  masteries          ConceptMastery[]
+  fixedQuestions     FixedQuestion[]
+  generatedQuestions GeneratedQuestion[]
+
+  @@index([lessonId, order])
+}
+
+/// Trusted source text. The AI may only ever receive passages where approved = true,
+/// and the server always resolves them itself — never from client input.
+model SourcePassage {
+  id                  String    @id @default(cuid())
+  lessonId            String
+  conceptId           String
+  text                String
+  /// Immutable capture of Baheth's timed transcript. Never overwritten by review edits.
+  rawBahethText       String?
+  /// Human-reviewed candidate text. It remains unapproved until an admin approves it.
+  reviewText          String?
+  /// Immutable capture of the independent PDF text layer aligned to this passage (never edited).
+  rawPdfText          String?
+  /// Provenance of the PDF text (file label) and the pages it was taken from.
+  pdfSource           String?
+  pdfPageStart        Int?
+  pdfPageEnd          Int?
+  /// Baheth transcript page and the recording it belongs to (traceability only).
+  bahethUrl           String?
+  videoUrl            String?
+  /// MATCH | PDF_CORRECTION | CONFLICT | UNCERTAIN — the worst status among the aligned segments.
+  alignmentStatus     String?
+  alignmentConfidence Float?
+  /// True when CONFLICT/UNCERTAIN segments need a human decision before approval.
+  humanReviewRequired Boolean   @default(false)
+  /// Per-segment alignment: timestamps, both raw texts, status, confidence and reasons.
+  alignmentDetails    Json?
+  sourceTitle         String
+  sourceAuthor        String
+  sourceReference     String
+  /// Optional original lesson/source URL, recorded for human traceability only.
+  /// Runtime generation never fetches this URL.
+  sourceUrl           String?
+  /// Bounds of this transcript segment in its source recording, entered by an admin.
+  /// They are provenance metadata, not AI-generated review timestamps.
+  startSecond         Int?
+  endSecond           Int?
+  /// Edition / publisher of the text (e.g. a specific تحقيق).
+  edition             String?
+  /// Licence or copyright status of this text.
+  license             String?
+  /// Who granted permission to publish it, and how it was recorded.
+  permissionNote      String?
+  /// Incremented whenever `text` changes. Editing text also revokes approval.
+  version             Int       @default(1)
+  approved            Boolean   @default(false)
+  approvedAt          DateTime?
+  approvedById        String?
+  /// SHA-256 of `text`, stamped by a database trigger at the moment of approval. The AI
+  /// pipeline refuses a passage whose current text no longer matches it (edited after approval).
+  approvedTextHash    String?
+  isSample            Boolean   @default(false)
+  order               Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  lesson             Lesson              @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  concept            Concept             @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  fixedQuestions     FixedQuestion[]
+  generatedQuestions GeneratedQuestion[]
+
+  @@index([conceptId, approved])
+  @@index([lessonId])
+}
+
+// ───────────────────────────── Learning state ─────────────────────────────
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  lessonId    String
+  studied     Boolean   @default(false)
+  studiedAt   DateTime?
+  completedAt DateTime?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+}
+
+/// Human-readable learning state, derived deterministically (see src/server/assessment/mastery.ts).
+enum MasteryState {
+  LEARNING
+  NEEDS_REINFORCEMENT
+  GOOD
+  MASTERED
+}
+
+/// Per-learner, per-concept educational progress indicator (0–100). Not a scientific measure.
+model ConceptMastery {
+  id                   String       @id @default(cuid())
+  userId               String
+  conceptId            String
+  masteryScore         Int          @default(50)
+  attempts             Int          @default(0)
+  correctCount         Int          @default(0)
+  incorrectCount       Int          @default(0)
+  consecutiveCorrect   Int          @default(0)
+  consecutiveIncorrect Int          @default(0)
+  lastDifficulty       Int?
+  /// Outcomes of the most recent answers on this concept (oldest first, at most 4).
+  recentOutcomes       Boolean[]    @default([])
+  state                MasteryState @default(LEARNING)
+  updatedAt            DateTime     @updatedAt
+  user                 User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  concept              Concept      @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, conceptId])
+}
+
+// ───────────────────────────── Assessment ─────────────────────────────
+
+enum AssessmentMode {
+  ADAPTIVE
+  FIXED
+}
+
+enum AssessmentPurpose {
+  PRACTICE
+  PRE_TEST
+  POST_TEST
+  /// Focused re-check of concepts that need reinforcement, after targeted review.
+  REASSESSMENT
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum QuestionType {
+  MCQ
+  TRUE_FALSE
+}
+
+enum QuestionOrigin {
+  AI_GENERATED
+  FIXED_BANK
+}
+
+/// Where a question sits in the adaptive flow of a lesson assessment.
+///   BASELINE            approved human question from the database
+///   VERIFICATION        first AI check after a wrong baseline answer
+///   SECOND_VERIFICATION second AI check after a wrong verification
+///   REASSESSMENT        AI check after the learner reviewed the exact approved video segment
+enum QuestionStage {
+  BASELINE
+  VERIFICATION
+  SECOND_VERIFICATION
+  REASSESSMENT
+}
+
+enum ValidationStatus {
+  VALID
+  REJECTED
+}
+
+model AssessmentSession {
+  id                     String            @id @default(cuid())
+  userId                 String
+  lessonId               String
+  mode                   AssessmentMode    @default(ADAPTIVE)
+  purpose                AssessmentPurpose @default(PRACTICE)
+  status                 SessionStatus     @default(IN_PROGRESS)
+  startedAt              DateTime          @default(now())
+  completedAt            DateTime?
+  /// Concepts for which the generator reported INSUFFICIENT_SOURCE in this session.
+  insufficientConceptIds String[]
+  /// REASSESSMENT sessions only ask about these concepts.
+  focusConceptIds        String[]
+  /// Short-lived lock that prevents two concurrent generations for one session.
+  generationLockUntil    DateTime?
+  /// Frozen result computed once at completion (see src/server/assessment/report.ts).
+  report                 Json?
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson    Lesson              @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions GeneratedQuestion[]
+  answers   StudentAnswer[]
+  feedback  LearnerFeedback?
+
+  @@index([userId, lessonId, status])
+}
+
+/// Predefined, human-approved questions used by the FIXED assessment arm.
+model FixedQuestion {
+  id              String       @id @default(cuid())
+  lessonId        String
+  conceptId       String
+  sourcePassageId String
+  questionType    QuestionType
+  question        String
+  options         String[]
+  correctIndex    Int
+  explanation     String
+  difficulty      Int
+  order           Int
+  approved        Boolean      @default(false)
+  isSample        Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  lesson        Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  concept       Concept       @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  sourcePassage SourcePassage @relation(fields: [sourcePassageId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId, order])
+}
+
+/// Every question candidate — validated or rejected — is stored for traceability.
+/// Only rows with validationStatus = VALID and a `sequence` are ever served.
+model GeneratedQuestion {
+  id                    String           @id @default(cuid())
+  /// Human-friendly running number for the admin trace view (Question #142).
+  number                Int              @unique @default(autoincrement())
+  sessionId             String
+  lessonId              String
+  conceptId             String
+  sourcePassageId       String
+  sourceVersion         Int
+  /// Exact passage text the generator received (survives later edits).
+  sourceSnapshot        String
+  origin                QuestionOrigin   @default(AI_GENERATED)
+  fixedQuestionId       String?
+  questionType          QuestionType
+  question              String
+  options               String[]
+  correctIndex          Int
+  correctAnswer         String
+  explanation           String
+  /// Verbatim excerpt of the approved passage that proves the correct answer (admin-only).
+  answerEvidence        String
+  /// Verbatim excerpt of the approved passage that proves the explanation (admin-only).
+  explanationEvidence   String           @default("")
+  difficulty            Int
+  validationStatus      ValidationStatus
+  validationIssues      String[]
+  /// Generator/validator model, prompt versions, attempt number, selection reason…
+  generatorMetadata     Json
+  stage                 QuestionStage    @default(BASELINE)
+  /// The question the learner had just answered when this follow-up was generated.
+  previousQuestionId    String?
+  /// What the learner chose on that previous question (context only, never a source).
+  studentPreviousAnswer String?
+  /// Generator model and prompt version that produced this candidate (AI questions only).
+  model                 String?
+  promptVersion         String?
+  /// Failed attempts before this candidate (attempt number − 1).
+  retryCount            Int              @default(0)
+  /// Structured generator output exactly as returned (bounded), for arbitration.
+  generatorRaw          Json?
+  /// Structured validator verdict: per-part checks, issues, reasons, supported options.
+  validatorResult       Json?
+  /// 1-based order in which the question was served; null for rejected candidates.
+  sequence              Int?
+  createdAt             DateTime         @default(now())
+
+  session          AssessmentSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  lesson           Lesson              @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  concept          Concept             @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  sourcePassage    SourcePassage       @relation(fields: [sourcePassageId], references: [id], onDelete: Cascade)
+  answer           StudentAnswer?
+  previousQuestion GeneratedQuestion?  @relation("QuestionChain", fields: [previousQuestionId], references: [id], onDelete: SetNull)
+  followUps        GeneratedQuestion[] @relation("QuestionChain")
+
+  @@unique([sessionId, sequence])
+  @@index([sessionId, validationStatus])
+}
+
+model StudentAnswer {
+  id             String            @id @default(cuid())
+  /// Unique: one answer per question — duplicate submissions are idempotent.
+  questionId     String            @unique
+  userId         String
+  sessionId      String
+  selectedIndex  Int
+  selectedAnswer String
+  correct        Boolean
+  masteryBefore  Int
+  masteryAfter   Int
+  /// Learning state of the concept right before / after this answer.
+  stateBefore    MasteryState      @default(LEARNING)
+  stateAfter     MasteryState      @default(LEARNING)
+  answeredAt     DateTime          @default(now())
+  question       GeneratedQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session        AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+/// Optional learner feedback captured after an assessment (for later evaluation).
+model LearnerFeedback {
+  id        String            @id @default(cuid())
+  userId    String
+  sessionId String            @unique
+  rating    Int
+  comment   String?
+  createdAt DateTime          @default(now())
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session   AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+// ───────────────────────────── AI observability ─────────────────────────────
+
+enum AIInteractionType {
+  GENERATE
+  VALIDATE
+  /// Performance analysis of a memorization attempt (history only — never audio, never canonical text).
+  ANALYZE_MEMORIZATION
+  /// Adaptive memorization reinforcement planning (structured facts in, bounded plan out — never audio, never Matn text).
+  PLAN_MEMORIZATION_REINFORCEMENT
+  /// One exercise decision of the interactive reinforcement coach (session facts in, one bounded exercise out).
+  DECIDE_MEMORIZATION_EXERCISE
+}
+
+enum AIInteractionStatus {
+  SUCCESS
+  INSUFFICIENT_SOURCE
+  REJECTED
+  MALFORMED_OUTPUT
+  PROVIDER_ERROR
+}
+
+/// Admin-only structured log of every AI call. Never shown to students.
+model AIInteractionLog {
+  id              String              @id @default(cuid())
+  type            AIInteractionType
+  provider        String
+  model           String
+  promptVersion   String
+  sourcePassageId String?
+  sourceVersion   Int?
+  sessionId       String?
+  userId          String?
+  questionId      String?
+  status          AIInteractionStatus
+  latencyMs       Int?
+  metadata        Json
+  createdAt       DateTime            @default(now())
+
+  @@index([sessionId])
+  @@index([userId, type, createdAt])
+  @@index([createdAt])
+}
+
+// ───────────────────────────── Measurement ─────────────────────────────
+
+/// Pre/post measurement for lessons with measurementEnabled. Only real, collected data.
+model LessonMeasurement {
+  id            String   @id @default(cuid())
+  userId        String
+  lessonId      String
+  preSessionId  String?  @unique
+  postSessionId String?  @unique
+  /// Accuracy (0–1) of the pre-test and post-test.
+  preScore      Float?
+  postScore     Float?
+  /// Snapshot { conceptId: { score, state, attempts } } taken when each test completed.
+  masteryBefore Json?
+  masteryAfter  Json?
+  /// Concepts answered incorrectly in the pre-test / post-test.
+  weakBefore    String[]
+  weakAfter     String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson        Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+}
+
+// ───────────────────────────── Admin audit ─────────────────────────────
+
+/// Append-only record of consequential admin actions (approvals, revocations, publication,
+/// edits, trial AI generations). Approvals made before this table existed remain readable
+/// from `approvedAt` / `approvedById` on SourcePassage and Concept.
+model AuditEvent {
+  id         String   @id @default(cuid())
+  /// Dotted action key, e.g. passage.approved, passage.revoked, lesson.published.
+  action     String
+  actorId    String?
+  entityType String
+  entityId   String
+  lessonId   String?
+  summary    String
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([lessonId, createdAt])
+  @@index([entityType, entityId])
+}
+
+// ───────────────────────────── Student motivation ─────────────────────────────
+
+enum MonthlyGoalKind {
+  /// Lessons completed during the calendar month.
+  LESSONS
+  /// Concepts that reached the «متقن» group (GOOD or MASTERED) during the calendar month.
+  CONCEPTS
+}
+
+/// Optional, learner-chosen goals plus the timezone that defines the learner's "day".
+/// A learner without a row (or with null goals) simply has no goals — nothing is required.
+model LearnerSettings {
+  userId            String           @id
+  /// IANA timezone; day, week (Saturday-start) and month boundaries are computed in it.
+  timezone          String           @default("Asia/Riyadh")
+  weeklyLessonGoal  Int?
+  monthlyGoalKind   MonthlyGoalKind?
+  monthlyGoalTarget Int?
+  updatedAt         DateTime         @updatedAt
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// One row per learner per local calendar day on which real learning happened (a completed
+/// lesson study, assessment or focused reassessment). Logging in never writes here.
+/// `day` is the local date key (YYYY-MM-DD) in the learner's timezone at that moment.
+model LearningDay {
+  id        String   @id @default(cuid())
+  userId    String
+  day       String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, day])
+  @@index([userId, day])
+}
+
+// ───────────────────────────── Approved quotes ─────────────────────────────
+
+/// A human-reviewed quote for the optional «اقتباس اليوم» slot on the student home.
+/// Quotes are never AI-generated; only rows with approved = true and a source are ever shown.
+model Quote {
+  id           String    @id @default(cuid())
+  text         String
+  author       String
+  source       String
+  approved     Boolean   @default(false)
+  approvedAt   DateTime?
+  approvedById String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([approved])
+}
+
+// ───────────────────────────── Matn memorization («حفظ المتن») ─────────────────────────────
+//
+// An independent journey: Course → MatnSection → MatnPassage → MatnUnit. It has no relation to Lesson,
+// so a learner can memorize without studying (and vice versa). Everything is DRAFT until a human approves it,
+// and learners only ever see content that is APPROVED at all three levels (fail closed).
+
+enum MatnStatus {
+  DRAFT
+  APPROVED
+}
+
+/// What the learner decided about ONE unit while listening to their own recording and reading the approved Matn.
+/// Never chosen by a machine.
+enum SelfAssessmentStatus {
+  CORRECT
+  INCORRECT
+  FORGOTTEN
+}
+
+/// Detail chosen by the learner for a non-correct unit. Kept separate from status so
+/// a whole-unit assessment is never conflated with selecting every word.
+enum SelfAssessmentScope {
+  WORDS
+  FULL_UNIT
+}
+
+/// Memorization mastery state of a passage (متقن / جيد / يحتاج إلى تثبيت / يحتاج إلى مراجعة). Independent of MasteryState.
+enum MemorizationState {
+  NEEDS_REVIEW
+  NEEDS_REINFORCEMENT
+  GOOD
+  MASTERED
+}
+
+enum RecitationKind {
+  PRACTICE
+  REVIEW
+}
+
+enum MemorizationAnalysisStatus {
+  /// A validated AI performance analysis is stored.
+  ANALYZED
+  /// AI was unavailable / timed out / returned invalid output; the deterministic result stands alone.
+  FALLBACK
+}
+
+/// Who chose the immediate reinforcement plan. Content is always canonical; only the plan's choices differ.
+enum ReinforcementPlanSource {
+  AI
+  DETERMINISTIC
+  /// BASELINE_REVIEW: no planner ran (evaluation baseline — the learner reviews the marked canonical units).
+  NONE
+}
+
+/// Evaluation condition of a reinforcement session. Ordinary learners always get AI_ADAPTIVE_REVIEW; BASELINE_REVIEW is
+/// assigned only through the server-side evaluation allowlist (never from the learner UI).
+enum ReinforcementReviewMode {
+  AI_ADAPTIVE_REVIEW
+  BASELINE_REVIEW
+}
+
+/// The finite set of recall tools the reinforcement coach may compose (src/server/memorization/reinforcement/coach.ts).
+enum ReinforcementExerciseType {
+  CLOZE_RECALL
+  CONTEXT_RECALL
+  REDUCED_CUE_RECALL
+  SEQUENCE_RECALL
+  DELAYED_RECALL
+  WHOLE_UNIT_RECALL
+  LINKED_SEQUENCE_RECALL
+}
+
+/// Learner self-report after revealing the canonical answer of one exercise (never inferred from audio).
+enum ReinforcementResponse {
+  RECALLED
+  PARTIAL
+  NOT_RECALLED
+}
+
+/// Who chose ONE exercise: the AI (validated), the deterministic policy when AI had no decision to make, or the safe
+/// fallback after a provider failure / validator rejection.
+enum ReinforcementDecisionSource {
+  AI
+  DETERMINISTIC
+  FALLBACK
+}
+
+enum ReinforcementPlanStatus {
+  /// Claimed by one request while it is being built (guarantees at most one AI call per attempt).
+  PENDING
+  READY
+  COMPLETED
+  SKIPPED
+}
+
+enum MemorizationGoalPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+/// Optional, independent line goal for the memorization journey. One editable goal per learner.
+model MemorizationGoal {
+  id          String                 @id @default(cuid())
+  userId      String                 @unique
+  targetUnits Int
+  period      MemorizationGoalPeriod
+  isActive    Boolean                @default(true)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Idempotent credit for a unit's first NEW memorization. Reviews and repeated practice cannot create a second row.
+model MemorizationGoalCredit {
+  id        String            @id @default(cuid())
+  userId    String
+  unitId    String
+  attemptId String
+  createdAt DateTime          @default(now())
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unit      MatnUnit          @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  attempt   RecitationAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, unitId])
+  @@index([userId, createdAt])
+  @@index([attemptId])
+}
+
+/// A group of passages (e.g. «خطبة المؤلف», «فصل فروض الوضوء»). Headings are navigation, not recitation units.
+model MatnSection {
+  id             String     @id @default(cuid())
+  courseId       String
+  order          Int
+  title          String
+  /// True when `title` is a short navigation label derived by the application (the source heading was a plain «فصل»).
+  /// It is application metadata and never part of the canonical text.
+  titleIsDerived Boolean    @default(false)
+  /// Optional wider heading shown above consecutive sections (e.g. «كتاب الطهارة»).
+  groupTitle     String?
+  /// The heading exactly as extracted from the source, kept for human review only.
+  sourceHeading  String?
+  status         MatnStatus @default(DRAFT)
+  approvedAt     DateTime?
+  approvedById   String?
+  /// Provenance of the import that created this row.
+  importBatch    String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  course   Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  passages MatnPassage[]
+
+  @@unique([courseId, order])
+}
+
+model MatnPassage {
+  id             String     @id @default(cuid())
+  sectionId      String
+  order          Int
+  title          String
+  /// Passage titles are always application navigation labels (never canonical text).
+  titleIsDerived Boolean    @default(true)
+  status         MatnStatus @default(DRAFT)
+  approvedAt     DateTime?
+  approvedById   String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  section  MatnSection           @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  units    MatnUnit[]
+  attempts RecitationAttempt[]
+  mastery  MemorizationMastery[]
+
+  @@unique([sectionId, order])
+}
+
+/// The smallest thing a learner evaluates: a short, semantically complete phrase of the canonical Matn.
+model MatnUnit {
+  id               String     @id @default(cuid())
+  passageId        String
+  order            Int
+  /// Canonical text exactly as supplied. Editing it revokes approval; no AI ever writes it.
+  canonicalText    String
+  status           MatnStatus @default(DRAFT)
+  /// Human-review notes recorded at import (suspicious spellings, boundary doubts). Informational.
+  reviewNotes      String[]
+  approvedAt       DateTime?
+  approvedById     String?
+  /// SHA-256 of `canonicalText` at the moment of approval.
+  approvedTextHash String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  passage     MatnPassage              @relation(fields: [passageId], references: [id], onDelete: Cascade)
+  results     RecitationUnitResult[]
+  goalCredits MemorizationGoalCredit[]
+
+  @@unique([passageId, order])
+}
+
+/// One completed recitation (practice or review). Counts, score, mastery and schedule are computed by the server
+/// from the learner's per-unit self-assessment — never taken from the browser. Audio is never stored.
+model RecitationAttempt {
+  id              String                      @id @default(cuid())
+  userId          String
+  passageId       String
+  /// Browser-generated id that makes a double submit idempotent (unique per learner).
+  clientAttemptId String
+  kind            RecitationKind              @default(PRACTICE)
+  totalUnits      Int
+  correctUnits    Int
+  incorrectUnits  Int
+  forgottenUnits  Int
+  /// correctUnits / totalUnits × 100, calculated by the server.
+  scorePercentage Float
+  startedAt       DateTime?
+  completedAt     DateTime                    @default(now())
+  /// Mastery of the passage before and after this attempt (deterministic, see src/server/memorization/mastery.ts).
+  masteryBefore   Int?
+  masteryAfter    Int
+  stateAfter      MemorizationState
+  /// Deterministic review date (see src/server/memorization/schedule.ts).
+  nextReviewAt    DateTime
+  /// Optional validated AI performance analysis. FALLBACK means none was produced.
+  analysisStatus  MemorizationAnalysisStatus?
+  analysis        Json?
+  analysisModel   String?
+  createdAt       DateTime                    @default(now())
+
+  user              User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  passage           MatnPassage                    @relation(fields: [passageId], references: [id], onDelete: Restrict)
+  results           RecitationUnitResult[]
+  goalCredits       MemorizationGoalCredit[]
+  /// The immediate reinforcement plan built from THIS attempt's self-assessment (at most one).
+  reinforcementPlan MemorizationReinforcementPlan? @relation("ReinforcementSource")
+  /// Set when this attempt is the re-recitation that followed a reinforcement plan.
+  reinforcementOf   MemorizationReinforcementPlan? @relation("ReinforcementFollowUp")
+
+  @@unique([userId, clientAttemptId])
+  @@index([userId, completedAt])
+  @@index([passageId])
+}
+
+model RecitationUnitResult {
+  id                   String               @id @default(cuid())
+  attemptId            String
+  unitId               String
+  selfAssessmentStatus SelfAssessmentStatus
+  /// Null on CORRECT and on legacy rows created before detailed self-assessment.
+  selfAssessmentScope  SelfAssessmentScope?
+  /// Stable indexes from tokenizeCanonicalMatn(unit.canonicalText); empty for full units and legacy rows.
+  wordIndexes          Int[]                @default([])
+  /// Stable indexes of words the learner did not recall. Kept separate from `wordIndexes` so a unit can contain both kinds of word-level issue.
+  forgottenWordIndexes Int[]                @default([])
+  createdAt            DateTime             @default(now())
+
+  attempt RecitationAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  unit    MatnUnit          @relation(fields: [unitId], references: [id], onDelete: Restrict)
+
+  @@unique([attemptId, unitId])
+  @@index([unitId])
+}
+
+/// Per-learner, per-passage memorization progress and review schedule. Separate from ConceptMastery.
+model MemorizationMastery {
+  id                 String            @id @default(cuid())
+  userId             String
+  passageId          String
+  masteryScore       Int
+  state              MemorizationState
+  attempts           Int               @default(0)
+  /// Attempts made when the passage was due for review.
+  reviewCount        Int               @default(0)
+  /// Consecutive attempts with every unit CORRECT.
+  consecutiveCorrect Int               @default(0)
+  /// Consecutive attempts with at least one unit not CORRECT.
+  consecutiveWeak    Int               @default(0)
+  errorCount         Int               @default(0)
+  forgottenCount     Int               @default(0)
+  lastScore          Float
+  lastReviewedAt     DateTime
+  nextReviewAt       DateTime
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  passage MatnPassage @relation(fields: [passageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, passageId])
+  @@index([userId, nextReviewAt])
+}
+
+/// Immediate adaptive reinforcement after ONE completed self-assessment (see src/server/memorization/reinforcement/).
+/// Independent of mastery and long-term scheduling: nothing here is read by mastery.ts or schedule.ts.
+/// `facts` are deterministic; `targets` passed the strict validator; Matn text is resolved from MatnUnit at display time.
+model MemorizationReinforcementPlan {
+  id                 String                   @id @default(cuid())
+  userId             String
+  /// The assessment this plan was built from (one plan per attempt → idempotent).
+  sourceAttemptId    String                   @unique
+  status             ReinforcementPlanStatus  @default(PENDING)
+  /// Evaluation condition. Existing rows were adaptive sessions → AI_ADAPTIVE_REVIEW.
+  reviewMode         ReinforcementReviewMode  @default(AI_ADAPTIVE_REVIEW)
+  planSource         ReinforcementPlanSource?
+  /// NOT_NEEDED | AI_ACCEPTED | FALLBACK:<reason>
+  aiOutcome          String?
+  /// Deterministic necessity reasons (e.g. MULTIPLE_TARGETS, REPEATED_HISTORY); empty when AI was not needed.
+  necessityReasons   String[]                 @default([])
+  promptVersion      String?
+  facts              Json?
+  observationKey     String?
+  targets            Json?
+  targetCount        Int                      @default(0)
+  /// Exposures the learner actually went through (≤ 2 per target).
+  exposuresCompleted Int?
+  completedAt        DateTime?
+  /// The re-recitation that followed this plan (before/after linkage).
+  followUpAttemptId  String?                  @unique
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceAttempt   RecitationAttempt  @relation("ReinforcementSource", fields: [sourceAttemptId], references: [id], onDelete: Cascade)
+  followUpAttempt RecitationAttempt? @relation("ReinforcementFollowUp", fields: [followUpAttemptId], references: [id], onDelete: SetNull)
+  exercises       MemorizationReinforcementExercise[]
+
+  @@index([userId, createdAt])
+}
+
+/// One exercise of an interactive reinforcement session, in order. Holds ONLY the validated decision (enums, session
+/// unit refs, canonical token indexes) and the learner's self-report — never Matn text, never audio. The unique
+/// (planId, order) claim makes refreshes, double clicks and second tabs reuse the same exercise (≤ 1 AI call each).
+model MemorizationReinforcementExercise {
+  id              String                       @id @default(cuid())
+  planId          String
+  /// 1-based position in the session.
+  order           Int
+  /// Null while the decision is being made (claimed, PENDING).
+  exerciseType    ReinforcementExerciseType?
+  decisionSource  ReinforcementDecisionSource?
+  /// AI_ACCEPTED | NOT_NEEDED | FALLBACK:<reason>
+  decisionOutcome String?
+  promptVersion   String?
+  /// Validated decision: { unitRefs, hiddenTokens, contextLevel, cueLevel, reasonCode }.
+  decision        Json?
+  reasonCode      String?
+  contextLevel    String?
+  cueLevel        String?
+  /// Session unit refs («u2») of the target units of this exercise.
+  targetRefs      String[]                     @default([])
+  response        ReinforcementResponse?
+  createdAt       DateTime                     @default(now())
+  readyAt         DateTime?
+  revealedAt      DateTime?
+  respondedAt     DateTime?
+
+  plan MemorizationReinforcementPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, order])
+}
