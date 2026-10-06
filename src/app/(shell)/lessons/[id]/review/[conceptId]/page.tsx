@@ -6,7 +6,6 @@ import { prisma } from "@/server/db";
 import { requireUser } from "@/server/auth/current-user";
 import { getLessonView } from "@/server/content/queries";
 import { getReviewTarget } from "@/server/learner/review";
-import { SampleNotice } from "@/components/learning/sample-notice";
 import { StartAssessmentButton } from "@/components/learning/start-assessment-button";
 import { VideoSegment } from "@/components/learning/video-segment";
 import { ButtonLink } from "@/components/ui/button";
@@ -52,7 +51,6 @@ export default async function TargetedReviewPage({ params }: Props) {
             {state ? <p className="mt-1.5 text-caption text-muted">{MASTERY_LEVEL_META[state].hint}</p> : null}
           </div>
         ) : null}
-        {target.lesson.isSample ? <SampleNotice compact className="mt-4" /> : null}
       </header>
 
       {target.video ? (

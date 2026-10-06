@@ -4,9 +4,8 @@ import { flattenPath, type PathCourse, type PathLesson } from "@/server/content/
 import { JourneyTabs } from "@/components/memorize/journey-tabs";
 import { LearningPath } from "@/components/learning/learning-path";
 import { LessonMeta, lessonAction, lessonStatusLabel } from "@/components/learning/path-node";
-import { SampleNotice } from "@/components/learning/sample-notice";
 import { JourneyProgress, LevelIdentity, NextStepPanel } from "@/components/learning/journey-parts";
-import { ar, availableLessonsLabel, countLabel, lessonDenominator } from "@/lib/format";
+import { ar, availableLessonsLabel, countLabel, learnerDescription, lessonDenominator } from "@/lib/format";
 
 const CONCEPTS = ["مفهوم واحد", "مفهومان", "مفاهيم", "مفهومًا"] as [string, string, string, string];
 
@@ -26,7 +25,7 @@ function nextLessonLine(lesson: PathLesson, completed: number): string {
   if (lesson.assessmentState === "IN_PROGRESS") return "لديك اختبار لم يكتمل. تابع من حيث توقفت.";
   if (lesson.studied) return "أتممت الدرس، والخطوة التالية اختبار فهمك.";
   if (completed === 0 && lesson.number === 1) return "ابدأ الدرس الأول لتبدأ رحلتك.";
-  return lesson.description;
+  return learnerDescription(lesson.description);
 }
 
 export function CourseJourney({ course, levelOrder, levelTitle, hasMemorization, weakCount }: { course: PathCourse; levelOrder: number | null; levelTitle: string | null; hasMemorization: boolean; weakCount: number }) {
@@ -65,8 +64,6 @@ export function CourseJourney({ course, levelOrder, levelTitle, hasMemorization,
       ) : null}
 
       <div className="border-t border-line p-5 sm:p-7">
-        {course.isSample ? <SampleNotice className="mb-6" /> : null}
-
         {next ? (
           <NextStepPanel
             id={`next-${course.id}`}

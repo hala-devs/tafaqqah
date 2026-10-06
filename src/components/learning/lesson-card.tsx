@@ -2,7 +2,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/cn";
-import { ar, lessonDenominator, ordinalLesson } from "@/lib/format";
+import { ar, learnerDescription, lessonDenominator, ordinalLesson } from "@/lib/format";
 
 type Props = {
   lesson: { id: string; title: string; description: string; number: number; studied: boolean; estimatedMinutes: number | null };
@@ -51,7 +51,7 @@ export function CurrentLessonCard({ lesson, chapterTitle, activeSessionId, cours
           {ordinalLesson(lesson.number)} · {chapterTitle}
         </p>
         <h3 className="mt-2 max-w-xl text-title text-ink">{lesson.title}</h3>
-        <p className="mt-2 max-w-xl text-muted">{lesson.description}</p>
+        {learnerDescription(lesson.description) ? <p className="mt-2 max-w-xl text-muted">{learnerDescription(lesson.description)}</p> : null}
 
         <ol className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2" aria-label="مرحلة الدرس">
           <Stage label="مرحلة التعلّم" state={lesson.studied ? "done" : "active"} />

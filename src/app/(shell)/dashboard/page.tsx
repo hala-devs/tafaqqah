@@ -16,7 +16,6 @@ import { HomeAttention } from "@/components/home/attention";
 import { JourneyCard } from "@/components/home/journey-card";
 import { TimezoneSync } from "@/components/home/timezone-sync";
 import { WeekCard } from "@/components/home/week-card";
-import { SampleNotice } from "@/components/learning/sample-notice";
 import { ar, countLabel, lessonDenominator } from "@/lib/format";
 
 export const metadata: Metadata = { title: "الرئيسية" };
@@ -168,11 +167,6 @@ export default async function DashboardPage() {
         </figure>
       ) : null}
 
-      {home.isSample ? (
-        <div className="mt-8">
-          <SampleNotice compact />
-        </div>
-      ) : null}
     </div>
   );
 }

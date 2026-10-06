@@ -12,7 +12,7 @@ import { MeasurementCard } from "@/components/learning/measurement-card";
 import { LessonJourney } from "@/components/learning/lesson-journey";
 import { Progress } from "@/components/ui/progress";
 import { getLessonStageInfo } from "@/server/learner/lesson-progress";
-import { ar, countLabel, ordinalLesson } from "@/lib/format";
+import { ar, countLabel, learnerDescription, ordinalLesson } from "@/lib/format";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -80,7 +80,7 @@ export default async function LessonPage({ params }: Props) {
               {view.course.title} · {ordinalLesson(view.number)}
             </p>
             <h1 className="mt-1 text-title text-ink">{lesson.title}</h1>
-            <p className="mt-3 text-muted">{lesson.description}</p>
+            {learnerDescription(lesson.description) ? <p className="mt-3 text-muted">{learnerDescription(lesson.description)}</p> : null}
             <div className="mt-6 rounded-2xl border border-line bg-surface p-5 shadow-soft sm:p-6">
               <LessonJourney stages={stageInfo.stages} />
               <Progress

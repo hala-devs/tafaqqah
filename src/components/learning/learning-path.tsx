@@ -1,5 +1,6 @@
 import type { PathChapter, PathLesson } from "@/server/content/queries";
 import { cn } from "@/lib/cn";
+import { learnerDescription } from "@/lib/format";
 import { PathNode } from "./path-node";
 
 function toNode(lesson: PathLesson) {
@@ -7,7 +8,7 @@ function toNode(lesson: PathLesson) {
     id: lesson.id,
     number: lesson.number,
     title: lesson.title,
-    description: lesson.description,
+    description: learnerDescription(lesson.description),
     state: lesson.state,
     studied: lesson.studied,
     assessmentState: lesson.assessmentState,
@@ -27,7 +28,7 @@ export function LearningPath({ chapters: all, compact }: { chapters: PathChapter
   const chapters = all.filter((c) => c.lessons.length > 0);
   const lessons = chapters.flatMap((c) => c.lessons);
   const lastId = lessons.at(-1)?.id;
-  const headingsRedundant = chapters.every((c) => c.lessons.length === 1 && c.lessons[0]!.title === c.title && !c.description);
+  const headingsRedundant = chapters.every((c) => c.lessons.length === 1 && c.lessons[0]!.title === c.title && !learnerDescription(c.description));
 
   if (headingsRedundant) {
     return (
@@ -49,7 +50,7 @@ export function LearningPath({ chapters: all, compact }: { chapters: PathChapter
               {chapter.title}
             </h3>
           </div>
-          {!compact && chapter.description ? <p className="mb-3 ms-9 max-w-xl text-small text-muted">{chapter.description}</p> : null}
+          {!compact && learnerDescription(chapter.description) ? <p className="mb-3 ms-9 max-w-xl text-small text-muted">{learnerDescription(chapter.description)}</p> : null}
           <ol className="relative">
             {chapter.lessons.map((lesson) => (
               <PathNode key={lesson.id} isLast={lesson.id === lastId} compact={compact} node={toNode(lesson)} />

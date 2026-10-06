@@ -20,9 +20,7 @@ export function SourceReference({ sources, className }: { sources: Source[]; cla
           <BookOpenText className="size-4" aria-hidden />
           المصدر العلمي
         </p>
-        {anySample ? (
-          <Badge tone="gold">محتوى تجريبي</Badge>
-        ) : (
+        {anySample ? null : (
           <Badge tone="success" icon={<ShieldCheck className="size-3.5" aria-hidden />}>
             نص معتمد
           </Badge>
