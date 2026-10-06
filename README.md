@@ -1,298 +1,239 @@
-<div dir="rtl">
-
 # تفقّه | Tafaqqah
 
-منصة تعليمية عربية لدراسة الفقه الحنبلي من مصادر معتمدة بشريًا: تفهم الدرس، وتُختبر في فهمه اختبارًا يتكيّف مع أخطائك، وتحفظ المتن وتثبّته بمساعدة مدرّب تكيفي. الذكاء الاصطناعي فيها مقيّد بالمصدر المعتمد، ولا يقرّر حكمًا فقهيًا.
+**Source-grounded learning, assessment, and memorization for structured Hanbali fiqh study.**
 
-> [!IMPORTANT]
-> تفقّه أداة تعليمية، ولا يقدّم فتاوى. الذكاء الاصطناعي فيه لا يقرّر حكمًا فقهيًا، ولا يختار المصادر، ولا يعتمد محتوى، ولا يغيّر نص المتن.
+Tafaqqah helps learners study approved lesson content, check their understanding, revisit weak concepts at linked source segments, and memorize approved matn units. AI operates only inside server-enforced source, validation, and fallback boundaries; it does not issue fatwas, select sources, approve content, grade answers, or decide mastery.
 
-## جرّب تفقّه مباشرة | Live Application
+## Live Demo
 
-**الرابط:** [ADD AFTER DEPLOYMENT]
+**Production:** <https://tafaqqah.onrender.com/>
 
-### تجربة الطالب
+### Judge Admin Access
 
-لا يوجد حساب طالب تجريبي جاهز؛ استخدم التسجيل العادي. كل ما تفعله يُحفظ فعلًا في قاعدة PostgreSQL للبيئة المنشورة.
+- Email: `judge.admin@tafaqqah.app`
+- Password: **Provided in the judging presentation**
 
-1. افتح المنصة
-2. أنشئ حسابًا جديدًا
-3. سجّل الدخول
-4. افتح الدرس الأول (المنهج ← «أخصر المختصرات» ← الدرس الأول)
-5. أكمل التقييم
-6. جرّب المراجعة الموجهة (تظهر عند تكرار الخطأ في مفهوم)
-7. جرّب رحلة الحفظ
-8. سجّل الخروج وادخل مرة أخرى لمشاهدة استمرار تقدمك
+This project-owner-provided account is for the deployed judge admin console. It is an application administrator account only; it does not provide infrastructure, database, source-control, or AI-provider access.
 
-### لوحة الإدارة — للجنة التحكيم
+## Judge Quick Start
 
-| | |
-|---|---|
-| لوحة الإدارة | [ADD AFTER DEPLOYMENT] |
-| البريد | [ADD FINAL JUDGE ADMIN EMAIL] |
-| كلمة المرور | [ADD FINAL JUDGING PASSWORD] |
+### A. Learner experience
 
-بيانات الدخول أعلاه مخصصة للتحكيم وتمنح الوصول إلى لوحة إدارة تفقّه الفعلية في البيئة المنشورة.
+1. Open the [live application](https://tafaqqah.onrender.com/), register a learner account, and sign in.
+2. Open **المسار العلمي** (`/curriculum`) and select the available published lesson.
+3. Read the lesson and inspect its **المصدر العلمي** card.
+4. Select **أكملت دراسة الدرس**, then **ابدأ اختبار فهمك**.
+5. Answer baseline questions. A wrong answer can trigger a source-bounded verification question; if the provider is unavailable, the system fails closed instead of inventing one.
+6. When offered, select **راجع هذا الجزء** to see an approved timestamped segment or approved passage, then select **اختبر فهمي مرة أخرى**.
+7. Open **مسار الحفظ** (`/memorize`), choose an available matn passage, record locally, self-assess, and inspect the result/review date.
+8. Open **المراجعة** (`/review`) or **تقدمي** (`/progress`) to see persisted learner state.
 
-هذا حساب إدارة داخل التطبيق فقط (دور `ADMIN`)، أُنشئ لأغراض التحكيم بكلمة مرور خاصة به. لا يتيح الوصول إلى الاستضافة أو قاعدة البيانات مباشرة أو GitHub أو مزوّد الذكاء الاصطناعي أو أي مفتاح أو متغير بيئة. لا تُعرض مفاتيح الخدمات في أي صفحة، ولا يمكن منح صلاحية المدير من المتصفح.
+Dynamic lesson, assessment, review, recitation, reinforcement, and result routes need server-issued identifiers. Reach them through the interface; they are deliberately not linked directly here.
 
-ما يمكن تجربته فعليًا في اللوحة:
+### B. Admin / AI evaluation experience
 
-| الصفحة | ما فيها |
-|---|---|
-| `/admin` | نظرة عامة على المحتوى وحالة الاعتماد والنشر |
-| `/admin/curriculum` · `/admin/lessons` | المستويات والكتب والأبواب والدروس، وتفاصيل كل درس ومفاهيمه وأسئلته الثابتة |
-| `/admin/sources` | المقاطع المصدرية مع بيانات المصدر: الموضع والطبعة ورابط التفريغ الزمني وصفحات PDF |
-| `/admin/review` | مراجعة المحتوى واعتماده: النص والتوقيت والمفاهيم والأسئلة الثابتة |
-| `/admin/matn` | مراجعة أقسام المتن ومقاطعه ووحدات الحفظ واعتمادها |
-| `/admin/ai` · `/admin/logs` | تتبّع الذكاء الاصطناعي: كل سؤال مرشّح، مقبول أو مرفوض، مع السبب ونسخة المقطع والموجّه والنموذج، وتجربة توليد سؤال |
-| `/admin/analytics` · `/admin/evaluation` | تحليلات التعلم، ومقارنة الاختبار الثابت بالتكيفي (مع تصدير) |
-| `/admin/students` | حسابات المتعلمين وتقدمهم |
-| `/admin/audit` | سجل كل عملية إدارية |
-| `/admin/settings` | حالة الذكاء الاصطناعي (المزوّد والنموذج فقط، دون أي مفتاح) وقواعد الاعتماد |
+1. Open [Admin login](https://tafaqqah.onrender.com/admin/login) and use the judge account.
+2. Start at [Admin overview](https://tafaqqah.onrender.com/admin).
+3. Inspect [Sources](https://tafaqqah.onrender.com/admin/sources), then [Content review](https://tafaqqah.onrender.com/admin/review).
+4. Inspect [Matn management](https://tafaqqah.onrender.com/admin/matn) and [Curriculum](https://tafaqqah.onrender.com/admin/curriculum).
+5. Open [AI overview](https://tafaqqah.onrender.com/admin/ai), then [AI logs](https://tafaqqah.onrender.com/admin/logs). Open a listed candidate from the UI to inspect its source snapshot, deterministic checks, validator result, and display status.
+6. Open [Evaluation](https://tafaqqah.onrender.com/admin/evaluation), [Analytics](https://tafaqqah.onrender.com/admin/analytics), [Students](https://tafaqqah.onrender.com/admin/students), and [Audit log](https://tafaqqah.onrender.com/admin/audit).
 
-الحالة الأولية للبيئة المنشورة: الدرس الأول **منشور**، والدرس الثاني **غير منشور** (مسودة تحت المراجعة العلمية، وليس ضمن بيانات النشر).
+## Direct Judge Links
 
-## ما المشكلة التي يحلها تفقّه؟
+| Page | Purpose | Direct link |
+| --- | --- | --- |
+| Admin overview | Content, approval, and operational overview | <https://tafaqqah.onrender.com/admin> |
+| Curriculum | Paths, levels, courses, chapters, and lessons | <https://tafaqqah.onrender.com/admin/curriculum> |
+| Lessons | Lesson-level content management | <https://tafaqqah.onrender.com/admin/lessons> |
+| Approved sources | Source registry and provenance | <https://tafaqqah.onrender.com/admin/sources> |
+| Content review | Review and approval workflow | <https://tafaqqah.onrender.com/admin/review> |
+| Matn management | Matn sections, passages, and units | <https://tafaqqah.onrender.com/admin/matn> |
+| AI overview | Provider status and controlled trial surface | <https://tafaqqah.onrender.com/admin/ai> |
+| Question traceability | Accepted/rejected candidates and evidence | <https://tafaqqah.onrender.com/admin/logs> |
+| Learning analytics | Learner/content aggregates | <https://tafaqqah.onrender.com/admin/analytics> |
+| AI evaluation | Pre/post and fixed-vs-adaptive evaluation | <https://tafaqqah.onrender.com/admin/evaluation> |
+| Students | Learner progress records | <https://tafaqqah.onrender.com/admin/students> |
+| Audit log | Consequential admin actions | <https://tafaqqah.onrender.com/admin/audit> |
+| AI settings | AI status and approval rules without secrets | <https://tafaqqah.onrender.com/admin/settings> |
 
-يدرس كثير من طلاب العلم المتون والشروح دون أن يعرفوا بدقة ما فهموه فعلًا وما يحتاج إلى مراجعة، ودون وسيلة منظمة لتثبيت محفوظهم في المواضع التي ينسونها أو يخطئون فيها. والأدوات العامة المعتمدة على الذكاء الاصطناعي قد تولّد معلومات فقهية غير موثّقة.
+## Recommended Judging Path
 
-## كيف يعمل؟
+1. Experience a learner lesson and baseline assessment.
+2. Trigger or inspect review/reassessment for a weak concept.
+3. Try memorization: local recording, self-assessment, review schedule, and reinforcement.
+4. Sign in as Judge Admin.
+5. Inspect the source and content-review state behind learner content.
+6. Inspect AI overview and logs; compare displayed and rejected candidates.
+7. Inspect evaluation, analytics, and audit history.
 
-رحلتان مرتبطتان بالمصدر نفسه:
+## What Judges Should Look For
 
-- **تعلّم وافهم:** دروس من مصدر معتمد، ثم اختبار فهم يبدأ ببنك أسئلة راجعه إنسان، ويتعمّق في المفاهيم التي أخطأ فيها المتعلم بأسئلة تحقق مولّدة من المقطع نفسه، ثم مراجعة موجّهة للمقطع المعتمد وتوقيته في الشرح المرئي.
-- **احفظ وثبّت:** تسميع المتن بتسجيل يبقى على جهازك، ثم مقارنة بالنص المعتمد وتقييم ذاتي على مستوى الكلمة، ثم جلسة تثبيت تفاعلية تتكيف مع استذكارك، ثم إعادة التسميع وقياس ما ثبت.
+### Source grounding
 
-```mermaid
-flowchart LR
-  S[دراسة الدرس المعتمد] --> A[أسئلة البنك المعتمد]
-  A -->|خطأ| V[سؤال تحقق مولَّد<br/>من المقطع نفسه + مدقق]
-  V -->|خطأ| R[مراجعة المقطع/الدقيقة المعتمدة]
-  R --> X[اختبر فهمي مرة أخرى]
-  A -->|صواب| M[تحديث الإتقان]
-  V -->|صواب| M
-  X --> M
+The server—not the browser—resolves the concept and source passage. Only passages marked approved and unchanged since approval are eligible for AI generation. Editing source text revokes usable approval.
+
+### Traceability
+
+Each generated candidate records lesson, concept, source passage, source version, source snapshot, generator metadata, deterministic findings, validator result, and display status. Admin logs show accepted and rejected candidates without storing private model chain-of-thought.
+
+### Fail-closed safety
+
+If source resolution is insufficient, output is malformed, validation rejects it, or the provider fails/times out, no fabricated question is displayed. Progress remains; fixed baseline assessment remains available.
+
+### Independent validation
+
+Generator and validator are separate model calls. Before model validation, deterministic server checks enforce structure, evidence, grounding, novelty, source-safe wording, and option quality. A candidate is served only after all required checks pass.
+
+### Human-governed content
+
+Admin workflows manage source passages, video timestamps, fixed questions, lesson publication, Matn units, and audit events. AI cannot approve sources, write trusted timestamps, or publish content.
+
+### Guided active recall
+
+Learners self-identify incorrect/forgotten words or full units. The application schedules review deterministically. The optional coach is restricted to bounded forms including cloze recall, context recall, reduced cues, sequence recall, delayed recall, and whole-unit recall.
+
+## AI Question Pipeline
+
+```text
+Approved source passage
+        ↓
+Concept and assessment context
+        ↓
+Structured question generation
+        ↓
+Deterministic server checks
+        ↓
+Independent structured validator
+        ↓
+Server verification and persistence
+        ↓
+Displayed to learner / Rejected and never displayed
 ```
 
-```mermaid
-flowchart LR
-  T[تسميع وتسجيل محلي] --> C[إظهار المتن المعتمد]
-  C --> E[تقييم ذاتي:<br/>أخطأت / لم أتذكر / السطر كاملًا]
-  E --> K[جلسة تثبيت تفاعلية]
-  K --> RR[إعادة التسميع]
-  RR --> BA[قبل / بعد]
-```
+The system records structured outcomes and validation reasons, including successful, rejected, insufficient-source, malformed-output, and provider-error paths. It stores no private model reasoning.
 
-## معمارية الذكاء الاصطناعي
+Reliability controls:
 
-**رحلة الفهم:**
+- Candidates are persisted before serving, with a generation lock to avoid duplicate concurrent generation.
+- Answer submission is idempotent: a duplicate request returns the stored answer.
+- The client requests the persisted next state rather than treating a lost response as proof of failure.
+- Generation has bounded retries and a per-question wall-clock budget; it fails closed when exhausted.
 
-```
-Approved Source → AI Generator → Deterministic Checks → Independent Validator → Server Verification → Display / Reject
-```
+## Evaluation
 
-- أسئلة التقييم الأساسية (16 سؤالًا للدرس الأول) **ليست** مولّدة: كتبها إنسان واعتمدها.
-- عند الخطأ يولّد النموذج سؤال تحقق من المقطع المعتمد نفسه فقط، ثم فحوص حتمية، ثم مدقق مستقل، ثم تحقق الخادم من أن الدليل موجود حرفيًا في المقطع. ما لا يمكن إثباته من المقطع يُرفض ولا يُعرض، ويُسجَّل مع سببه.
+The [AI evaluation page](https://tafaqqah.onrender.com/admin/evaluation) implements lesson-level pre/post measurement and fixed-versus-adaptive comparison. It presents collected records only; it does not manufacture outcome claims. The admin-only API export is `/api/admin/evaluation`.
 
-**رحلة الحفظ:**
+## Current Product Scope
 
-```
-Structured Learner Performance → bounded adaptive reinforcement → learner response → next bounded exercise
-```
+- **Understanding:** one lesson is currently published with approved source passages, approved review timestamps, and a fixed question bank. A second lesson is draft and not learner-published.
+- **Memorization:** only approved Matn sections, passages, and units are learner-visible; draft content remains hidden.
+- **Roadmap:** future levels may appear as roadmap stages, not as learner-openable content.
+- **Impact:** mastery and pre/post measurement mechanisms are implemented. No completed comparative learning study or measured learning-improvement claim is made.
 
-- بعد أن يحدد المتعلم بنفسه المواضع التي أخطأ فيها أو نسيها، يختار النموذج التمرين التالي من أدوات محددة سلفًا (كلمة ناقصة، استذكار بالسياق، تقليل التلميح، الانتقال بين سطرين، عودة مؤجلة، السطر كاملًا، أسطر متتالية). يُخرج قرارات منظّمة فقط (نوع التمرين وأرقام المواضع)، والنص يُستخرج دائمًا من المتن المعتمد في الخادم. كل قرار يمر بمدقق صارم، ويوجد بديل حتمي عند الإخفاق.
+## Production Status
 
-**أين لا يُستخدم الذكاء الاصطناعي:** لا يصدر فتاوى، ولا يحدد حكمًا فقهيًا، ولا يختار المصادر، ولا يعتمد محتوى، ولا يكتب نصًّا معتمدًا أو توقيتًا، ولا يحكم على التلاوة أو يسمع الصوت، ولا يقرر الإتقان المخزّن ولا التصحيح ولا جدول المراجعة النهائي. هذه كلها قرارات بشرية أو حتمية في الكود.
-
-التفاصيل: [docs/AI_ARCHITECTURE.md](docs/AI_ARCHITECTURE.md).
-
-## الموثوقية والسلامة العلمية
-
-- **اعتماد بشري:** لا يرى المتعلم ولا النموذج إلا ما اعتمده إنسان في لوحة الإدارة. تعديل النص بعد اعتماده يلغي الاعتماد.
-- **فصل المولّد عن المدقق:** كل سؤال مولَّد يمر بفحوص حتمية ومدقق مستقل، ويُحفظ كل مرشّح (المقبول والمرفوض) مع سبب القرار.
-- **تصحيح حتمي:** الإجابات تُصحَّح بمفتاح محفوظ في الخادم، والإتقان والجدولة تحسبها قواعد ثابتة في الكود.
-- **الإخفاق الآمن:** إذا تعذّر النموذج أو رُفض ناتجه لا يُعرض محتوى مزيّف: يستمر الاختبار ببنك الأسئلة المعتمد، ويستمر التثبيت بتمارين حتمية.
-- **حماية الخادم:** صلاحيات الإدارة تُفحص في الخادم في كل صفحة وإجراء وواجهة برمجية؛ صفحات الإدارة تُرجع 404 لغير المدير، والخدمات الإدارية تُرجع 403.
-
-## الخصوصية
-
-- تسجيل التسميع يبقى في المتصفح: لا يُرفع إلى الخادم، ولا يُحفظ في قاعدة البيانات، ولا يُحوَّل إلى نص، ولا يُرسل إلى أي نموذج.
-- لا يتلقى الذكاء الاصطناعي اسم المتعلم أو بريده أو معرّفاته؛ يتلقى حقائق منظمة بمراجع مجهولة فقط.
-- مفاتيح النماذج والموجّهات لا تُرسل إلى المتصفح.
-- لاحظ أن حساب الإدارة يرى حسابات المتعلمين (الاسم والبريد) وتقدمهم في البيئة المنشورة، كما في أي لوحة إدارة.
-
-## النطاق العامل حاليًا
-
-| الرحلة | المحتوى |
-|---|---|
-| الفهم | مقرر واحد مفعّل. **الدرس الأول منشور:** 12 مقطعًا مصدريًا معتمدًا، و12 توقيتًا معتمدًا، و16 سؤالًا أساسيًا ثابتًا معتمدًا |
-| تمهيد | درسان تعريفيان قصيران عن منهج تفقّه نفسه («منهج الدراسة والاختبار» و«الإتقان والتكيّف والمراجعة»)، نصهما مكتوب للمشروع وموسوم بأنه تجريبي، وليس محتوى فقهيًا |
-| الحفظ | 8 أقسام معتمدة، و19 مقطعًا، و94 وحدة حفظ معتمدة (من مقدمة المؤلف إلى نهاية فصل الحيض والنفاس) |
-| الدرس الثاني | مسودة تحت المراجعة العلمية، غير ظاهرة للمتعلم، وليست ضمن بيانات النشر |
-| المستويات 2–7 | خارطة طريق فقط («قريبًا»)، دون محتوى |
-
-</div>
-
-## Technical architecture
-
-```mermaid
-flowchart TB
-  subgraph Browser["Browser (Arabic RTL)"]
-    UI[Server-rendered pages]
-    Rec[Recorder — audio stays local]
-  end
-  subgraph Server["Next.js server"]
-    Act[Server actions & route handlers<br/>strict schemas · server-side role checks]
-    Eng[Assessment engine · memorization facts<br/>mastery · schedule — deterministic]
-    AIQ[Question pipeline<br/>generator → checks → validator → server verification]
-    AIC[Reinforcement coach<br/>decision → strict validator → fallback]
-    Prov[AIProvider: Gemini · Anthropic · dev-only mock]
-  end
-  DB[(PostgreSQL 17 · Prisma 7)]
-  UI --> Act --> Eng --> DB
-  Eng --> AIQ --> Prov
-  Eng --> AIC --> Prov
-  AIQ -->|approved passages only| DB
-  AIC -->|canonical Matn resolved server-side| DB
-```
-
-All state (accounts, sessions, progress, mastery, memorization history, AI logs) lives in PostgreSQL. Approved release content ships as `prisma/seed-data/release-content.json` and is loaded into an empty database on first start. It contains no users, sessions or learner data.
-
-**Tech stack:** Next.js 16.3.8 (App Router) · React 19.2.8 · TypeScript · Node 22 · Tailwind CSS 4 · PostgreSQL 17 · Prisma 7.10.0 (`@prisma/adapter-pg`) · Zod · Google Gen AI SDK (Gemini) · Anthropic SDK · Vitest · Playwright · Docker Compose.
-
-More: [docs/AI_ARCHITECTURE.md](docs/AI_ARCHITECTURE.md) · [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) · [docs/ATTRIBUTION.md](docs/ATTRIBUTION.md).
-
-## Quick start with Docker
-
-Requirements: Docker with Docker Compose.
+This repository includes type checking, linting, Prisma schema validation, Vitest suites, and Playwright specifications. Use the exact checkout/environment under review to obtain current results:
 
 ```bash
-git clone https://github.com/hala-devs/tafaqqah.git Tafaqqah
-cd Tafaqqah
-cp .env.example .env          # Windows: copy .env.example .env
-# edit .env: POSTGRES_PASSWORD (required); GEMINI_API_KEY for real AI; ADMIN_EMAIL/ADMIN_PASSWORD for an admin account
-docker compose up --build
-```
-
-Open <http://localhost:3000> (or `APP_PORT`).
-
-1. PostgreSQL starts with a persistent volume (`tafaqqah-pg`).
-2. All migrations are applied. **On an empty database only**, the learning path and the human-approved release content are loaded, and the admin account from `ADMIN_EMAIL`/`ADMIN_PASSWORD` is created. Restarts never re-seed or overwrite admin edits.
-3. The app starts. `/api/health` reports database and AI status.
-
-**Without an AI key** the app still works: the understanding test uses the approved question bank only, AI follow-up questions are skipped (never faked), and memorization reinforcement uses deterministic fallback exercises. `/api/health` reports `degraded`.
-
-Useful: `docker compose logs -f app` · `docker compose down` (keeps data) · `docker compose down -v` (deletes the database).
-
-## Local development (without Docker)
-
-Requirements: Node.js ≥ 20.9 (22 recommended), npm, PostgreSQL 17.
-
-```bash
-npm install                     # runs prisma generate
-cp .env.example .env            # set DATABASE_URL
-npm run db:bootstrap            # prisma migrate deploy + idempotent seed of the learning path and approved content
-npm run dev                     # → http://localhost:3000
-```
-
-`npm run db:bootstrap` is safe to run again: every record is upserted by a stable id, so content is never duplicated and accounts/learner data are never touched. Never use `prisma migrate reset` on a database you care about.
-
-## Dependencies
-
-Declared in [package.json](package.json) and pinned in [package-lock.json](package-lock.json) (`npm install` / `npm ci`).
-
-| Runtime | Purpose |
-|---|---|
-| `next` 16.3.8, `react` / `react-dom` 19.2.8 | web framework and UI |
-| `@prisma/client`, `@prisma/adapter-pg`, `pg` (Prisma 7.10) | PostgreSQL access |
-| `@google/genai` | Gemini provider (default AI) |
-| `@anthropic-ai/sdk` | optional Anthropic provider |
-| `zod` | validation of input and AI output |
-| `lucide-react` | icons |
-| `server-only` | keeps server modules (and keys) out of the browser bundle |
-
-Development: `prisma`, `typescript`, `tsx`, `eslint` + `eslint-config-next`, `tailwindcss` 4 + `@tailwindcss/postcss`, `vitest`, `@playwright/test`, `dotenv`, type packages.
-External services: PostgreSQL 17 (bundled in Docker Compose) and, optionally, a Gemini or Anthropic API key. Fonts are self-hosted; no font CDN is needed at runtime.
-
-## Environment variables
-
-See [.env.example](.env.example) (placeholders only, never real values).
-
-| Group | Variables |
-|---|---|
-| **Required** | `POSTGRES_PASSWORD` (Docker) **or** `DATABASE_URL` (non-Docker) |
-| **Recommended for real AI** | `AI_PROVIDER` (`gemini` or `anthropic`) + `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` |
-| Optional | `APP_PORT`, `POSTGRES_USER`, `POSTGRES_DB`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `GEMINI_MODEL`, `AI_GENERATOR_MODEL`, `AI_VALIDATOR_MODEL`, `AI_GENERATOR_EFFORT`, `AI_VALIDATOR_EFFORT`, `ASSESSMENT_MODE_STRATEGY`, `AI_RATE_LIMIT_PER_10_MIN`, `REINFORCEMENT_BASELINE_USER_IDS` |
-| Tests only | `TEST_DATABASE_URL` (a separate database; tests empty it) |
-
-AI keys are read only from server-side environment variables; they are never sent to the browser or stored in the database or seed files.
-
-## Tests & verification
-
-```bash
-npm run typecheck && npm run lint
-npm test                        # needs TEST_DATABASE_URL (a separate database that the tests empty)
+npm run typecheck
+npm run lint
+npx prisma validate
+npm test
+npm run test:e2e
 npm run build
 ```
 
-Release audit (2026-10-05):
+`npm test` uses `TEST_DATABASE_URL`, which must be separate because integration tests clear test tables. Playwright is configured for desktop (1366×900) and mobile (390×844). Use command or CI output for a passing count; this README does not manufacture one.
 
-| Check | Result |
-|---|---|
-| Automated tests (Vitest) | 528 passed, 0 failed, 30 public test files. Internal Lesson 2 review artifacts and their draft test pipeline are intentionally excluded from the public repository. |
-| Typecheck | passes |
-| ESLint | 0 errors (5 warnings in untouched files) |
-| Production build | passes |
-| Prisma validate / Client generation | pass |
-| Fresh PostgreSQL | all 19 migrations apply on an empty database |
-| Docker | clean-clone startup, first-boot seed, persistence across restart, registration, Lesson 1 and the memorization scope verified |
-| Mobile | 390 px width checked for horizontal overflow |
-| Real AI | **0 real Gemini calls were made during the release audit.** All automated tests use a mock provider. Live Gemini behaviour is still to be verified on the deployed environment |
+## Technical Stack
 
-Playwright end-to-end tests live in `e2e/` and need a running server.
+- Next.js 16, React 19, TypeScript, Tailwind CSS 4
+- PostgreSQL with Prisma 7 and `@prisma/adapter-pg`
+- Zod request and AI-output schemas
+- Google Gen AI SDK (Gemini), plus Anthropic and development-only mock implementations
+- Custom email/password authentication with scrypt hashes and hashed server-side sessions
+- Vitest, Playwright, Dockerfile, Docker Compose, and `/api/health`
 
-## Sources & attribution
+## Architecture
 
-- **Matn:** «أخصر المختصرات» — محمد بن بدر الدين بن بلبان الحنبلي. Transcribed word for word (Matn only, no footnotes or editorial material) from the edition by د. أنس بن عادل اليتامى و د. عبدالعزيز بن عدنان العيدان، دار ركائز للنشر والتوزيع، الطبعة الأولى 1441هـ / 2019م. Data: [content/sources](content/sources/akhsar-al-mukhtasarat-matn.md).
-- **Explanation (Lesson 1):** شرح الشيخ محمد بن أحمد باجابر. Its video is referenced by URL with human-approved timestamps and is never re-hosted.
-- Every passage stores its own provenance (visible in `/admin/sources`). The in-app methodology page is `/methodology`.
-- **Attribution does not imply permission.** This project claims no publisher permission, redistribution licence, endorsement, partnership or scholarly certification. Source PDFs/scans are not included in this repository. Details: [docs/ATTRIBUTION.md](docs/ATTRIBUTION.md).
-
-## Current limitations
-
-- **Content:** one published lesson in the understanding journey, and a portion of the Matn (approved units only) in the memorization journey. Lesson 2 is an unpublished draft. Levels 2–7 are roadmap only.
-- **Human approval:** new content stays hidden until a person approves it in the admin console.
-- **AI:** output quality is constrained by the source but not guaranteed. The system rejects what it cannot prove and does not claim the model never errs. Live Gemini behaviour has not yet been verified on a deployment. Free-tier provider quotas are small.
-- **No impact claims:** pre/post measurement and the fixed-vs-adaptive comparison exist, but no results have been collected.
-- **Admin access is full application access:** the judging admin account can change and approve content like any admin. Every change is recorded in `/admin/audit`.
-
-## Project structure
-
-```
-src/app/            routes: (shell) learner pages · (focus) assessment · (auth) login/register · (admin) admin console · api/
-src/server/         assessment engine, AI pipeline & providers, memorization, auth, admin services
-src/components/     UI components
-src/lib/            client utilities (incl. the local-only recorder)
-prisma/             schema, 19 migrations, seed.ts, seed-data/ (learning path + approved release content)
-content/            canonical Matn source text and its structure
-scripts/            content import/export, admin bootstrap, Docker bootstrap, verification helpers
-tests/              Vitest unit & integration tests
-e2e/                Playwright end-to-end tests
-docs/               AI architecture, deployment, attribution
+```text
+Learner / Admin browser
+        ↓
+Next.js pages, server actions, and API routes
+        ↓
+Assessment + memorization services
+        ↓                         ↓
+PostgreSQL / Prisma          Configured AI provider
+        ↓                         ↓
+Approved source records      Structured output + validation
 ```
 
-## Submission links
+The browser submits identifiers and option selections. Source retrieval, authorization, grading, mastery updates, approval checks, and AI calls run on the server.
 
-| | |
-|---|---|
-| Live Demo | [ADD AFTER DEPLOYMENT] |
-| Public GitHub | https://github.com/hala-devs/tafaqqah |
-| Demo Video | [ADD WHEN PUBLISHED] |
-| Presentation | [ADD WHEN PUBLISHED] |
+## Safety, Security, and Privacy
+
+- Server-side authorization protects pages, actions, and route handlers; non-admin users cannot access admin traceability surfaces.
+- The client cannot supply an alternate source passage or answer key.
+- Fixed questions are graded against stored keys. Mastery and review schedules are deterministic application rules.
+- Source resolution requires approved, non-empty, unchanged text; otherwise it fails closed.
+- AI keys are server-side environment variables and are not included in client bundles.
+- Recitation audio remains a local browser Blob: it is not uploaded, stored, transcribed, or sent to AI.
+- The system logs structured outputs, verdicts, and permitted diagnostics—not private reasoning.
+
+## Local Development
+
+Requirements: Node.js 20.9+ (Node 22 recommended), npm, and PostgreSQL.
+
+```bash
+npm install
+cp .env.example .env
+# Windows PowerShell: Copy-Item .env.example .env
+# Configure DATABASE_URL, TEST_DATABASE_URL, and an AI provider if required.
+npm run db:deploy
+npm run db:seed
+npm run dev
+```
+
+Open <http://localhost:3000>.
+
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run test:e2e
+npm run build
+npm run db:deploy
+npm run db:seed
+```
+
+For local PostgreSQL through Docker Compose:
+
+```bash
+docker compose up -d postgres
+```
+
+See [.env.example](.env.example), [AI architecture](docs/AI_ARCHITECTURE.md), [deployment](docs/DEPLOYMENT.md), and [attribution](docs/ATTRIBUTION.md).
+
+## Project Structure
+
+```text
+src/app/          App Router pages, layouts, handlers, and server actions
+src/server/       assessment, AI, auth, admin, memorization, and database services
+src/components/   learner, memorization, admin, and UI components
+prisma/           schema, migrations, seed, and seed data
+content/          canonical Matn and content-processing inputs
+tests/            Vitest unit/integration suites
+e2e/              Playwright browser specifications
+docs/             architecture, deployment, and attribution
+```
+
+## Links
+
+- Live product: <https://tafaqqah.onrender.com/>
+- GitHub: <https://github.com/hala-devs/tafaqqah>
+- Methodology: <https://tafaqqah.onrender.com/methodology>
 
 ## License
 
-The MIT license applies to the software code authored for this project. Third-party source materials remain subject to their respective rights and are not relicensed by this repository. See [LICENSE](LICENSE) and [docs/ATTRIBUTION.md](docs/ATTRIBUTION.md).
-
-**Author:** Hala Alharbi | هلا الحربي
+The project code is available under the [MIT License](LICENSE). Third-party source texts and videos remain subject to their own rights; see [Attribution](docs/ATTRIBUTION.md).
