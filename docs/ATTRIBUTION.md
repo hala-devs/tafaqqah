@@ -8,7 +8,7 @@ The software code authored for Tafaqqah is released under the [MIT License](../L
 
 ## Source materials
 
-Tafaqqah identifies its sources so that every passage can be traced. **Attribution is not a claim of permission.** This repository does not claim any publisher permission, redistribution licence, endorsement, partnership, scholarly certification or formal authorization from the author's heirs, the editors, the publisher, the lesson's presenter or any platform.
+Tafaqqah identifies its sources so that every passage can be traced. **Attribution is not, by itself, a claim of permission.** Except for the documented permission for Sheikh Muhammad bin Ahmad Bajaber's explanations below, this repository does not claim any publisher permission, redistribution licence, endorsement, partnership, scholarly certification or formal authorization from the author's heirs, the editors, the publisher, any platform, or other rights holders.
 
 ### The Matn (memorization journey)
 
@@ -32,6 +32,16 @@ Section headings marked as derived (`titleIsDerived`) are navigation labels writ
 | Files | `prisma/seed-data/release-content.json` (approved passages, timestamps and baseline questions) |
 
 Each passage stores its own provenance fields (source title, location, edition note, timed-transcript URL, PDF page range) and is visible to admins under **/admin/sources**.
+
+### Permission for Sheikh Muhammad bin Ahmad Bajaber's explanations
+
+Tafaqqah has received explicit permission from Sheikh Muhammad bin Ahmad Bajaber to use his recorded explanations/videos for the project.
+
+Evidence of this permission is retained privately by the project team and can be provided to the judging committee if required.
+
+The original recordings remain attributed to Sheikh Muhammad bin Ahmad Bajaber. Tafaqqah does not claim ownership of the Sheikh's original recordings.
+
+This permission concerns the Sheikh's recorded explanations/videos only. It does not grant rights over the Matn edition, the publisher's edition, third-party PDFs, platform-owned materials, or any other third-party content; those rights remain documented separately according to their actual status.
 
 ### Not included in this repository
 
