@@ -185,13 +185,46 @@ The browser submits identifiers and option selections. Source retrieval, authori
 
 ## Local Development
 
-Requirements: Node.js 20.9+ (Node 22 recommended), npm, and PostgreSQL.
+Requirements: Node.js 20.9+ (Node 22 recommended), npm, and PostgreSQL 17 (or Docker).
+
+### Environment variables
+
+Copy the template, then edit `.env`:
+
+```bash
+cp .env.example .env
+# Windows PowerShell: Copy-Item .env.example .env
+```
+
+| Variable | Needed for | Notes |
+| --- | --- | --- |
+| `DATABASE_URL` | `npm run dev` with your own PostgreSQL | Ignored by Docker Compose, which builds its own. |
+| `POSTGRES_PASSWORD` | Docker Compose | Any local value; never leaves your machine. |
+| `TEST_DATABASE_URL` | `npm test` | **Must be a separate database** — the integration tests empty it. The tests refuse to run if it equals `DATABASE_URL`. |
+| `AI_PROVIDER` + `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` | AI features | Optional; see below. |
+
+Every other variable in [.env.example](.env.example) is optional and documented there.
+
+**AI keys.** Use your own key: Gemini from [Google AI Studio](https://aistudio.google.com/apikey) (`AI_PROVIDER="gemini"`), or Anthropic from the [Claude Console](https://console.anthropic.com/settings/keys) (`AI_PROVIDER="anthropic"`). The production keys of the live demo are set only in the host's environment; they are not in this repository, and `.env` is git-ignored.
+
+**Running without an AI key** works. The app reports AI as not configured and never fakes AI output: the understanding test uses the human-approved question bank, AI follow-up questions and targeted re-checks are skipped, and memorization reinforcement uses its deterministic fallback exercises. `AI_PROVIDER="mock"` is a development-only provider and is refused when `NODE_ENV=production`.
+
+### Option A — everything in Docker Compose
+
+Set `POSTGRES_PASSWORD` (and optionally an AI key) in `.env`, then:
+
+```bash
+docker compose up --build
+```
+
+This starts PostgreSQL, applies migrations, seeds the content on the first start of an empty database, and serves the app at <http://localhost:3000> (`APP_PORT` changes the port). The Compose database is not published on a host port, so it is not reachable from `npm run dev` or `npm test`.
+
+### Option B — Node.js with your own PostgreSQL
+
+Create two databases (for example `tafaqqah` and `tafaqqah_test`), point `DATABASE_URL` and `TEST_DATABASE_URL` at them, then:
 
 ```bash
 npm install
-cp .env.example .env
-# Windows PowerShell: Copy-Item .env.example .env
-# Configure DATABASE_URL, TEST_DATABASE_URL, and an AI provider if required.
 npm run db:deploy
 npm run db:seed
 npm run dev
@@ -207,12 +240,6 @@ npm run test:e2e
 npm run build
 npm run db:deploy
 npm run db:seed
-```
-
-For local PostgreSQL through Docker Compose:
-
-```bash
-docker compose up -d postgres
 ```
 
 See [.env.example](.env.example), [AI architecture](docs/AI_ARCHITECTURE.md), [deployment](docs/DEPLOYMENT.md), and [attribution](docs/ATTRIBUTION.md).
