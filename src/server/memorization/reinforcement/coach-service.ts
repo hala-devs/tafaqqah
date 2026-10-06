@@ -12,6 +12,7 @@ import {
   deriveSession,
   deterministicDecision,
   exerciseWindow,
+  RECALL_HINTS,
   renderExercise,
   RESPONSES,
   sessionBudget,
@@ -27,8 +28,8 @@ import {
   type RenderedUnit,
 } from "./coach";
 import { COACH_PROMPT_VERSION, COACH_TIMEOUT_MS, requestCoachDecision } from "./coach-ai";
-import { EXERCISE_TITLE, exerciseInstruction, exerciseLead } from "./copy";
-import type { MemorizationPerformanceFacts } from "./facts";
+import { EXERCISE_TITLE, exerciseInstruction, exerciseLead, GUIDED_INSTRUCTION } from "./copy";
+import { isUnitLevelEvidence, type MemorizationPerformanceFacts } from "./facts";
 import { validatePlan } from "./plan";
 import { loadBookUnits, type BookUnit } from "./service";
 
@@ -177,6 +178,25 @@ function resolveWindow(book: BookUnit[], facts: MemorizationPerformanceFacts, d:
   return out;
 }
 
+/**
+ * Guided recall: a fully hidden first target with nothing before it gets the canonical line that precedes it in the
+ * book as a cue («ما النص الذي يأتي بعده؟»). Display only — the stored decision, cue strength and schedule are untouched.
+ * Without an approved previous line the window is unchanged and the beginning of the line is shown instead.
+ */
+function withPreviousLine(book: BookUnit[], facts: MemorizationPerformanceFacts, d: ExerciseDecision, window: ResolvedWindow): { window: ResolvedWindow; previousLine: boolean } {
+  const first = window[0];
+  if (!first || first.role !== "TARGET") return { window, previousLine: false };
+  const fact = facts.units.find((u) => u.ref === first.ref);
+  const whole = d.exerciseType === "WHOLE_UNIT_RECALL" || Boolean(fact && isUnitLevelEvidence(fact.evidence));
+  if (!fact || !whole) return { window, previousLine: false };
+  const position = book.findIndex((u) => u.id === fact.unitId);
+  const previous = position > 0 ? book[position - 1] : undefined;
+  if (!previous || !previous.eligible) return { window, previousLine: false };
+  const tokens = tokenizeCanonicalMatn(previous.text);
+  if (tokens.length === 0) return { window, previousLine: false };
+  return { window: [{ ref: null, role: "CONTEXT", tokens }, ...window], previousLine: true };
+}
+
 // ───────────────────────────── View ─────────────────────────────
 
 export type ExerciseView = {
@@ -188,6 +208,8 @@ export type ExerciseView = {
   lead: string | null;
   revealed: boolean;
   units: RenderedUnit[];
+  /** Guided recall: hints used so far and whether one more would reveal anything. Never sent after reveal. */
+  hints: { used: number; canHint: boolean };
 };
 
 export type CoachView = {
@@ -202,7 +224,7 @@ export type CoachView = {
   alreadyReRecited: boolean;
 };
 
-async function buildView(db: PrismaClient, plan: LoadedPlan, rows: ExerciseRow[]): Promise<CoachView> {
+async function buildView(db: PrismaClient, plan: LoadedPlan, rows: ExerciseRow[], hints = 0): Promise<CoachView> {
   const { row, facts, targetGroups } = plan;
   const ctx: CoachContext = { facts, targetGroups, previous: {}, played: played(rows) };
   const base = {
@@ -222,9 +244,16 @@ async function buildView(db: PrismaClient, plan: LoadedPlan, rows: ExerciseRow[]
 
   const decision = last.decision as unknown as ExerciseDecision;
   if (checkExerciseStructure(decision, facts)) return { ...base, state: "UNAVAILABLE" };
-  const window = resolveWindow(await loadBookUnits(db, row.sourceAttempt.passage.section.courseId), facts, decision);
-  if (!window) return { ...base, state: "UNAVAILABLE" };
+  const book = await loadBookUnits(db, row.sourceAttempt.passage.section.courseId);
+  const resolved = resolveWindow(book, facts, decision);
+  if (!resolved) return { ...base, state: "UNAVAILABLE" };
+  const { window, previousLine } = withPreviousLine(book, facts, decision, resolved);
   const revealed = last.revealedAt !== null;
+  const used = revealed ? 0 : Math.max(0, Math.min(RECALL_HINTS.max, Math.trunc(hints)));
+  const render = (level: number) => renderExercise(decision, facts, window, revealed, { leadingCue: true, hints: level });
+  const units = render(used);
+  const canHint = !revealed && used < RECALL_HINTS.max && JSON.stringify(render(used + 1)) !== JSON.stringify(units);
+  const guided = units.some((u) => u.role === "TARGET" && u.segments.some((s) => s.kind === "HIDDEN" && s.rest));
   return {
     ...base,
     state: "ACTIVE",
@@ -233,19 +262,34 @@ async function buildView(db: PrismaClient, plan: LoadedPlan, rows: ExerciseRow[]
       number: last.order,
       exerciseType: decision.exerciseType,
       title: EXERCISE_TITLE[decision.exerciseType],
-      instruction: exerciseInstruction(decision.exerciseType, decision.hiddenTokens.length),
+      instruction: previousLine
+        ? GUIDED_INSTRUCTION.NEXT_LINE
+        : guided && used === 0
+          ? GUIDED_INSTRUCTION.COMPLETE_LINE
+          : exerciseInstruction(decision.exerciseType, decision.hiddenTokens.length),
       lead: exerciseLead(decision.reasonCode, decision.exerciseType),
       revealed,
-      units: renderExercise(decision, facts, window, revealed),
+      units,
+      hints: { used, canHint },
     },
   };
 }
 
 /** Read-only view (render time). Never creates an exercise and never calls a provider. */
-export async function getCoachView(db: PrismaClient, userId: string, planId: string): Promise<CoachView | null> {
+export async function getCoachView(db: PrismaClient, userId: string, planId: string, hints = 0): Promise<CoachView | null> {
   const plan = await loadPlan(db, userId, planId);
   if (!plan) return null;
-  return buildView(db, plan, await exercisesOf(db, plan.row.id));
+  return buildView(db, plan, await exercisesOf(db, plan.row.id), hints);
+}
+
+/**
+ * Progressive hint (learner-requested, before reveal): the same exercise rendered with `level` hints — further leading
+ * words of the hidden text, never all of it. Read-only: the decision, responses and schedule are not changed.
+ */
+export async function hintExercise(db: PrismaClient, userId: string, planId: string, exerciseId: string, level: unknown): Promise<CoachView | null> {
+  if (typeof level !== "number" || !Number.isInteger(level) || level < 0 || level > RECALL_HINTS.max) throw new AppError("BAD_REQUEST");
+  await ownedExercise(db, userId, planId, exerciseId);
+  return getCoachView(db, userId, planId, level);
 }
 
 // ───────────────────────────── Deciding the next exercise (idempotent, ≤ 1 AI call) ─────────────────────────────

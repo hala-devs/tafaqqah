@@ -5,7 +5,7 @@ import { getAIProvider } from "@/server/ai/factory";
 import { requireApiLearner } from "@/server/auth/current-user";
 import { isAppError } from "@/server/errors";
 import { hitRateLimit } from "@/server/rate-limit";
-import { advanceCoach, respondExercise, revealExercise, type CoachView } from "@/server/memorization/reinforcement/coach-service";
+import { advanceCoach, hintExercise, respondExercise, revealExercise, type CoachView } from "@/server/memorization/reinforcement/coach-service";
 import { finishReinforcement } from "@/server/memorization/reinforcement/service";
 
 export type FinishState = { ok: true } | { ok: false; error: string };
@@ -37,6 +37,12 @@ export async function advanceCoachAction(planId: unknown): Promise<CoachState> {
 export async function revealExerciseAction(planId: unknown, exerciseId: unknown): Promise<CoachState> {
   if (!validId(planId) || !validId(exerciseId)) return { ok: false, error: UNAVAILABLE };
   return run("reveal", (userId) => revealExercise(prisma, userId, planId, exerciseId));
+}
+
+/** Progressive hint before reveal: the same exercise with `level` hints (more leading words, never the whole answer). */
+export async function hintExerciseAction(planId: unknown, exerciseId: unknown, level: unknown): Promise<CoachState> {
+  if (!validId(planId) || !validId(exerciseId)) return { ok: false, error: UNAVAILABLE };
+  return run("hint", (userId) => hintExercise(prisma, userId, planId, exerciseId, level));
 }
 
 /** Records the learner's self-report (RECALLED / PARTIAL / NOT_RECALLED) and moves to the next exercise. */

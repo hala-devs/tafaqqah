@@ -3,7 +3,8 @@ import type { RenderedUnit } from "@/server/memorization/reinforcement/coach";
 
 /**
  * Canonical text of one exercise. Before reveal, hidden words and masked cue text are typed placeholders WITHOUT their
- * text (read as «كلمة مخفية» / «نص مخفي» / «سطر مخفي»); after reveal, the previously hidden words are highlighted.
+ * text (read as «كلمة مخفية» / «نص مخفي» / «سطر مخفي»). A guided-recall cue shows only the words the server sent (the
+ * start of the line, a hint letter) followed by «بقية السطر مخفية»; after reveal, the previously hidden words are highlighted.
  */
 export function ExerciseText({ units, revealed }: { units: RenderedUnit[]; revealed: boolean }) {
   return (
@@ -21,7 +22,17 @@ export function ExerciseText({ units, revealed }: { units: RenderedUnit[]; revea
           <p key={i} lang="ar" className={cn("font-naskh leading-[2.1] [overflow-wrap:anywhere]", isTarget ? "text-question-lg text-ink-dark" : "text-body text-muted")} data-testid={isTarget ? "target-unit" : "context-unit"}>
             {!isTarget ? <span className="sr-only">سياق: </span> : null}
             {unit.segments.map((s, k) =>
-              s.kind === "HIDDEN" ? (
+              s.kind === "HIDDEN" && s.rest ? (
+                <span key={k} className="mx-0.5 inline-block min-w-32 border-b-2 border-ink/50 align-baseline" data-testid="hidden-rest">
+                  <span aria-hidden>&nbsp;</span>
+                  <span className="sr-only">بقية السطر مخفية</span>{" "}
+                </span>
+              ) : s.kind === "PREFIX" ? (
+                <span key={k} className="text-sage-deep" data-testid="hint-prefix">
+                  <span className="sr-only">تلميح: يبدأ بـ </span>
+                  {s.text}
+                </span>
+              ) : s.kind === "HIDDEN" ? (
                 <span key={k} className="mx-0.5 inline-block min-w-12 border-b-2 border-ink/50 align-baseline" data-testid="hidden-token">
                   <span aria-hidden>&nbsp;</span>
                   <span className="sr-only">كلمة مخفية</span>{" "}

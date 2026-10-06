@@ -508,6 +508,9 @@ enum AIInteractionType {
   PLAN_MEMORIZATION_REINFORCEMENT
   /// One exercise decision of the interactive reinforcement coach (session facts in, one bounded exercise out).
   DECIDE_MEMORIZATION_EXERCISE
+  /// One server-side request for a runtime question (tracking only: created when the request reaches the engine,
+  /// updated with its final outcome). Not a model call — never counted in latency or rate-limit figures.
+  GENERATION_REQUEST
 }
 
 enum AIInteractionStatus {
@@ -516,6 +519,10 @@ enum AIInteractionStatus {
   REJECTED
   MALFORMED_OUTPUT
   PROVIDER_ERROR
+  /// GENERATION_REQUEST only: the request reached the engine and has no outcome yet (or died without one).
+  STARTED
+  /// GENERATION_REQUEST only: ended without a question (metadata.errorCode says why).
+  FAILED
 }
 
 /// Admin-only structured log of every AI call. Never shown to students.

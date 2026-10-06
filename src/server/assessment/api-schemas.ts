@@ -7,7 +7,7 @@ import { AppError } from "@/server/errors";
  * a "correct answer", or other fields is rejected — the server resolves approved passages
  * itself from the database.
  */
-export const nextQuestionBody = z.object({ reviewed: z.boolean().optional() }).strict();
+export const nextQuestionBody = z.object({ reviewed: z.boolean().optional(), peek: z.boolean().optional() }).strict();
 
 export const answerBody = z
   .object({

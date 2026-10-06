@@ -517,38 +517,96 @@ export function buildCoachPayload(ctx: CoachContext, schemaVersion: string): Rec
 
 // ───────────────────────────── Safe rendering (canonical text resolved by the backend) ─────────────────────────────
 
-export type Segment = { kind: "TEXT"; text: string; wasHidden: boolean; target: boolean } | { kind: "HIDDEN" } | { kind: "MASKED" };
+export type Segment =
+  | { kind: "TEXT"; text: string; wasHidden: boolean; target: boolean }
+  /** `rest`: the remainder of a line whose beginning is shown as a cue. */
+  | { kind: "HIDDEN"; rest?: true }
+  | { kind: "MASKED" }
+  /** First letter of a hidden word, shown as its last hint. */
+  | { kind: "PREFIX"; text: string };
 export type RenderedUnit = { role: "TARGET" | "CONTEXT"; fullyHidden: boolean; segments: Segment[] };
+
+/** Guided recall: a cue so a card is never blank, plus learner-requested hints. Presentation only — never a decision input. */
+export const RECALL_HINTS = { max: 2 } as const;
+export type RecallCue = { hints?: number; leadingCue?: boolean };
+
+/** Words shown at the start of a fully hidden line that has no visible line before it. */
+function baseCue(hiddenCount: number): number {
+  return hiddenCount >= 6 ? 2 : 1;
+}
+const hintStep = (hiddenCount: number) => Math.max(1, Math.ceil(hiddenCount / 4));
+const firstLetter = (word: string) => word.match(/^.[ً-ٰٟ]*/u)?.[0] ?? "";
+
+/**
+ * How much of each target is given away before reveal: the first `shown` hidden positions (in reading order) and, when
+ * no whole word can be given without exposing the entire answer, the first letter of the next hidden word. At least one
+ * hidden word always stays hidden, so the answer is never fully exposed before «أظهر النص».
+ */
+function cuePlan(order: number[], level: number, leading: boolean): { shown: Set<number>; prefix: number | null } {
+  const wanted = (leading ? baseCue(order.length) : 0) + level * hintStep(order.length);
+  const shown = Math.min(wanted, order.length - 1);
+  const prefix = wanted > shown && order.length > shown ? order[shown]! : null;
+  return { shown: new Set(order.slice(0, shown)), prefix };
+}
 
 /**
  * Turns a validated decision + canonical tokens into what the browser receives. BEFORE reveal a hidden or masked word
  * is not sent at all — only a typed placeholder — so it cannot leak through the DOM, accessibility tree or RSC payload.
  * A visible word that is the same word as a hidden one (anywhere in the window, compared after Arabic normalisation)
  * is masked too, so the answer never appears in the visible text of its own exercise.
+ *
+ * `cue` (guided recall): `leadingCue` shows the beginning of a fully hidden line that has no visible line before it in
+ * the window; `hints` (0…RECALL_HINTS.max, learner-requested) reveals further leading words. Only the words named by the
+ * cue are sent; everything after them stays a placeholder.
  */
-export function renderExercise(d: ExerciseDecision, facts: MemorizationPerformanceFacts, window: { ref: string | null; role: "TARGET" | "CONTEXT"; tokens: string[] }[], revealed: boolean): RenderedUnit[] {
+export function renderExercise(
+  d: ExerciseDecision,
+  facts: MemorizationPerformanceFacts,
+  window: { ref: string | null; role: "TARGET" | "CONTEXT"; tokens: string[] }[],
+  revealed: boolean,
+  cue: RecallCue = {},
+): RenderedUnit[] {
   const byRef = unitsByRef(facts);
-  const answers = new Set<string>();
-  for (const w of window) {
+  const level = Math.max(0, Math.min(RECALL_HINTS.max, Math.trunc(cue.hints ?? 0)));
+  const plans = window.map((w, k) => {
     const fact = w.role === "TARGET" && w.ref ? byRef.get(w.ref)! : null;
-    if (!fact) continue;
+    if (!fact) return null;
     const whole = isUnitLevelEvidence(fact.evidence) || d.exerciseType === "WHOLE_UNIT_RECALL";
-    w.tokens.forEach((t, i) => {
-      if (whole || d.hiddenTokens.some((h) => h.unitRef === fact.ref && h.index === i)) answers.add(normalizeArabic(t));
-    });
-  }
+    const hidden = new Set(d.hiddenTokens.filter((t) => t.unitRef === fact.ref).map((t) => t.index));
+    const order = whole ? w.tokens.map((_, i) => i) : [...hidden].sort((x, y) => x - y);
+    const before = window[k - 1];
+    const visibleBefore = before !== undefined && before.role === "CONTEXT";
+    return { fact, whole, hidden, order, ...cuePlan(order, level, Boolean(cue.leadingCue) && whole && !visibleBefore) };
+  });
+  const answers = new Set<string>();
+  window.forEach((w, k) => {
+    const p = plans[k];
+    if (!p) return;
+    for (const i of p.order) if (!p.shown.has(i)) answers.add(normalizeArabic(w.tokens[i]!));
+  });
   answers.delete("");
-  return window.map((w) => {
-    const fact = w.role === "TARGET" && w.ref ? byRef.get(w.ref)! : null;
-    const fullyHidden = Boolean(fact && (isUnitLevelEvidence(fact.evidence) || d.exerciseType === "WHOLE_UNIT_RECALL"));
-    const hidden = new Set(fact ? d.hiddenTokens.filter((t) => t.unitRef === fact.ref).map((t) => t.index) : []);
+  return window.map((w, k) => {
+    const p = plans[k];
+    const fact = p?.fact ?? null;
+    const fullyHidden = Boolean(p?.whole);
+    const hidden = p?.hidden ?? new Set<number>();
     const radius = fact && hidden.size > 0 ? COACH_CAPS.cueRadius[d.cueLevel] : Infinity;
     const near = (i: number) => radius === Infinity || [...hidden].some((h) => Math.abs(h - i) <= radius);
     if (revealed) return { role: w.role, fullyHidden, segments: w.tokens.map((text, i) => ({ kind: "TEXT" as const, text, wasHidden: fullyHidden || hidden.has(i), target: Boolean(fact) })) };
-    if (fullyHidden) return { role: w.role, fullyHidden, segments: [{ kind: "HIDDEN" as const }] };
+    const given = p ? p.shown.size > 0 || p.prefix !== null : false;
+    if (fullyHidden && !given) return { role: w.role, fullyHidden, segments: [{ kind: "HIDDEN" as const }] };
+    if (fullyHidden && p) {
+      // «الفقه معرفة ________»: the given beginning, then one placeholder for the rest of the line.
+      const segments: Segment[] = [...p.shown].map((i) => ({ kind: "TEXT" as const, text: w.tokens[i]!, wasHidden: false, target: true }));
+      if (p.prefix !== null) segments.push({ kind: "PREFIX", text: firstLetter(w.tokens[p.prefix]!) });
+      segments.push({ kind: "HIDDEN", rest: true });
+      return { role: w.role, fullyHidden: false, segments };
+    }
     const segments: Segment[] = [];
     w.tokens.forEach((text, i) => {
-      if (hidden.has(i)) segments.push({ kind: "HIDDEN" });
+      if (p?.shown.has(i)) segments.push({ kind: "TEXT", text, wasHidden: false, target: true });
+      else if (p?.prefix === i) segments.push({ kind: "PREFIX", text: firstLetter(text) }, { kind: "HIDDEN" });
+      else if (hidden.has(i)) segments.push({ kind: "HIDDEN" });
       else if (!near(i) || answers.has(normalizeArabic(text))) {
         if (segments.at(-1)?.kind !== "MASKED") segments.push({ kind: "MASKED" });
       } else segments.push({ kind: "TEXT", text, wasHidden: false, target: Boolean(fact) });

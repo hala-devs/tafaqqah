@@ -27,7 +27,7 @@ export default async function AdminLogsPage({ searchParams }: { searchParams: Pr
   await requireAdminPage();
   const { status } = await searchParams;
   const filter = status === "VALID" || status === "REJECTED" ? status : undefined;
-  const [questions, failedAttempts, statusCounts] = await Promise.all([
+  const [questions, failedAttempts, statusCounts, requests] = await Promise.all([
     prisma.generatedQuestion.findMany({
       where: { origin: "AI_GENERATED", ...(filter ? { validationStatus: filter } : {}) },
       orderBy: { createdAt: "desc" },
@@ -43,7 +43,8 @@ export default async function AdminLogsPage({ searchParams }: { searchParams: Pr
       orderBy: { createdAt: "desc" },
       take: 20,
     }),
-    prisma.aIInteractionLog.groupBy({ by: ["type", "status"], _count: { _all: true } }),
+    prisma.aIInteractionLog.groupBy({ by: ["type", "status"], where: { type: { not: "GENERATION_REQUEST" } }, _count: { _all: true } }),
+    prisma.aIInteractionLog.findMany({ where: { type: "GENERATION_REQUEST" }, orderBy: { createdAt: "desc" }, take: 30 }),
   ]);
 
   return (
@@ -175,6 +176,42 @@ export default async function AdminLogsPage({ searchParams }: { searchParams: Pr
           </table>
         </div>
       )}
+
+      <section aria-labelledby="requests" className="space-y-3">
+        <h2 id="requests" className="text-card font-semibold text-ink">
+          طلبات التوليد (كل طلب وصل إلى الخادم)
+        </h2>
+        <p className="text-small text-muted">يُنشأ السجل لحظة وصول الطلب ثم يُحدَّث بنتيجته. «STARTED» بلا تحديث يعني طلبًا ما زال يعمل أو انقطع.</p>
+        {requests.length ? (
+          <ul className="divide-y divide-line rounded-xl border border-line bg-surface text-small" data-testid="generation-requests">
+            {requests.map((log) => {
+              const meta = (log.metadata ?? {}) as { stage?: string; errorCode?: string | null; elapsedMs?: number };
+              return (
+                <li key={log.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <Badge tone={log.status === "SUCCESS" ? "success" : log.status === "STARTED" ? "neutral" : "warning"} className="font-mono">
+                      {log.status}
+                    </Badge>
+                    {meta.stage ? <span className="font-mono text-caption text-muted">{meta.stage}</span> : null}
+                    {meta.errorCode ? <span className="font-mono text-caption text-muted">{meta.errorCode}</span> : null}
+                    {log.questionId ? (
+                      <Link href={`/admin/questions/${log.questionId}`} className="text-caption text-ink underline">
+                        السؤال
+                      </Link>
+                    ) : null}
+                  </span>
+                  <span className="font-mono text-caption text-muted" dir="ltr">
+                    {log.id.slice(-8)} · {typeof meta.elapsedMs === "number" ? `${Math.round(meta.elapsedMs / 1000)}s · ` : ""}
+                    {when(log.createdAt)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-small text-muted">لا توجد.</p>
+        )}
+      </section>
 
       <section aria-labelledby="no-question" className="space-y-3">
         <h2 id="no-question" className="text-card font-semibold text-ink">

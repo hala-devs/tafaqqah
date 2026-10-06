@@ -183,7 +183,7 @@ describe.skipIf(!hasTestDb)("assessment engine (database)", () => {
     expect(stored.sourceSnapshot).toBe(approved.text);
     expect(stored.question).not.toBe(wrong?.stored.question);
 
-    const logs = await db.aIInteractionLog.findMany({ where: { sessionId } });
+    const logs = await db.aIInteractionLog.findMany({ where: { sessionId, type: { not: "GENERATION_REQUEST" } } });
     expect(logs.map((l) => l.type)).toEqual(expect.arrayContaining(["GENERATE", "VALIDATE"]));
     expect(logs.every((l) => l.sourcePassageId === approved.id)).toBe(true);
   });
@@ -376,7 +376,7 @@ describe.skipIf(!hasTestDb)("assessment engine (database)", () => {
     const next = await getNextQuestion(deps, student.id, sessionId);
     expect(next.kind === "question" && next.question.stage).toBe("BASELINE");
     expect((await db.assessmentSession.findUniqueOrThrow({ where: { id: sessionId } })).insufficientConceptIds).toEqual([C]);
-    expect(await db.aIInteractionLog.count({ where: { sessionId, status: "INSUFFICIENT_SOURCE" } })).toBe(1);
+    expect(await db.aIInteractionLog.count({ where: { sessionId, type: "GENERATE", status: "INSUFFICIENT_SOURCE" } })).toBe(1);
   });
 
   it("provider failures are distinct, calm and retryable — the session, answers and mastery survive", async () => {

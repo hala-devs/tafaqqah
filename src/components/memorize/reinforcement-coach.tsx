@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Eye, RotateCcw } from "lucide-react";
-import { advanceCoachAction, finishReinforcementAction, respondExerciseAction, revealExerciseAction, type CoachState } from "@/app/(focus)/memorize/reinforce/[planId]/actions";
+import { Eye, Lightbulb, RotateCcw } from "lucide-react";
+import { advanceCoachAction, finishReinforcementAction, hintExerciseAction, respondExerciseAction, revealExerciseAction, type CoachState } from "@/app/(focus)/memorize/reinforce/[planId]/actions";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ExerciseText } from "./exercise-text";
@@ -20,7 +20,8 @@ const POLL_MS = 1500;
 const MAX_POLLS = 10;
 
 /**
- * The interactive reinforcement coach: one exercise card at a time → «أظهر النص» → «كيف كان استرجاعك؟» → the next
+ * The interactive reinforcement coach: one exercise card at a time (always with a cue: the previous line or the start of
+ * the hidden line) → optional «تلميح» (more of the beginning, never all of it) → «أظهر النص» → «كيف كان استرجاعك؟» → the next
  * exercise is chosen from that answer. No chat, no generated prose: every sentence comes from the server's approved copy.
  * Hidden words never reach this component before reveal (the server sends typed placeholders only).
  */
@@ -172,7 +173,19 @@ export function ReinforcementCoach({ initial }: { initial: CoachView }) {
       ) : null}
 
       {exercise && !exercise.revealed ? (
-        <div className="mt-6">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          {exercise.hints.canHint ? (
+            <Button
+              variant="secondary"
+              size="lg"
+              disabled={busy}
+              icon={<Lightbulb className="size-4" aria-hidden />}
+              onClick={() => void apply(hintExerciseAction(view.planId, exercise.id, exercise.hints.used + 1))}
+              data-testid="hint-target"
+            >
+              {exercise.hints.used === 0 ? "تلميح" : "تلميح آخر"}
+            </Button>
+          ) : null}
           <Button variant="primary" size="lg" loading={busy} icon={<Eye className="size-4" aria-hidden />} onClick={() => void apply(revealExerciseAction(view.planId, exercise.id))} data-testid="reveal-target">
             أظهر النص
           </Button>

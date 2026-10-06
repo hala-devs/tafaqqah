@@ -356,7 +356,7 @@ export async function getAuditTimeline(db: PrismaClient, actor: Actor, limit = 2
     db.sourcePassage.findMany({ where: { approved: true, approvedAt: { not: null } }, select: { lessonId: true, approvedAt: true, approvedById: true } }),
     db.concept.findMany({ where: { videoApproved: true, videoApprovedAt: { not: null } }, select: { lessonId: true, videoApprovedAt: true, videoApprovedById: true } }),
     db.aIInteractionLog.findMany({
-      where: { OR: [{ type: "VALIDATE" }, { status: { not: "SUCCESS" } }] },
+      where: { type: { not: "GENERATION_REQUEST" }, OR: [{ type: "VALIDATE" }, { status: { not: "SUCCESS" } }] },
       orderBy: { createdAt: "desc" },
       take: 80,
       select: { id: true, type: true, status: true, provider: true, model: true, createdAt: true, metadata: true, sessionId: true },

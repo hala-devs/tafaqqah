@@ -12,6 +12,7 @@ import { cn } from "@/lib/cn";
 import type { ApprovedVideo } from "@/lib/video";
 import { QuestionCard, type QuestionView } from "./question-card";
 import { VideoSegment } from "./video-segment";
+import { ApiError, NETWORK_FAILURE, NO_RETRY_CODES, fetchNext, post, type ApiFailure } from "./next-request";
 
 type Purpose = "PRACTICE" | "PRE_TEST" | "POST_TEST" | "REASSESSMENT";
 
@@ -21,9 +22,6 @@ const PURPOSE_TITLE: Record<Purpose, string> = {
   PRE_TEST: "الاختبار القبلي",
   POST_TEST: "الاختبار البعدي",
 };
-
-/** Codes for which retrying the same step makes no sense. */
-const NO_RETRY_CODES = new Set(["AI_NOT_CONFIGURED", "INSUFFICIENT_SOURCE", "SOURCE_NOT_APPROVED"]);
 
 type Progress = { answered: number; min: number; max: number; fixedTotal: number | null };
 
@@ -51,38 +49,6 @@ type AnswerResponse = {
   sessionComplete: boolean;
   progress: Progress;
 };
-
-type ApiFailure = { code: string; message: string };
-
-class ApiError extends Error {
-  constructor(readonly failure: ApiFailure) {
-    super(failure.code);
-  }
-}
-
-const NETWORK_FAILURE: ApiFailure = {
-  code: "NETWORK",
-  message: "تعذّر الاتصال بالخادم. تحقّق من اتصالك ثم حاول مرة أخرى.",
-};
-
-async function post<T>(url: string, body: unknown): Promise<T> {
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    throw new ApiError(NETWORK_FAILURE);
-  }
-  const data = await response.json().catch(() => null);
-  if (!response.ok) {
-    const failure = (data as { error?: ApiFailure } | null)?.error;
-    throw new ApiError(failure ?? { code: "INTERNAL", message: "حدث خطأ غير متوقع. حاول مرة أخرى." });
-  }
-  return data as T;
-}
 
 const GENERATION_MESSAGES = [
   { after: 0, text: "نجهز سؤالك من المادة المعتمدة…" },
@@ -210,15 +176,21 @@ export function AssessmentRunner({
   const reviewed = useRef(false);
   const resultUrl = `/lessons/${lessonId}/result?session=${sessionId}`;
 
-  const requestNext = useCallback(async (): Promise<NextResponse> => {
-    // "pending" means another request is already generating this session's question.
-    for (let attempt = 0; attempt < 60; attempt++) {
-      const data = await post<NextResponse>(`/api/assessment/${sessionId}/next`, reviewed.current ? { reviewed: true } : {});
-      if (data.kind !== "pending") return data;
-      await new Promise((resolve) => setTimeout(resolve, 2500));
-    }
-    throw new ApiError({ code: "AI_TIMEOUT", message: "استغرق تجهيز السؤال وقتًا أطول من المعتاد. حاول مرة أخرى." });
-  }, [sessionId]);
+  const inFlight = useRef<Promise<NextResponse> | null>(null);
+  const requestNext = useCallback(
+    (options: { checkFirst?: boolean } = {}): Promise<NextResponse> => {
+      // One logical request at a time: a double click or a retry during a request joins the running one.
+      if (inFlight.current) return inFlight.current;
+      const body = () => (reviewed.current ? { reviewed: true } : {});
+      const run = () => fetchNext<NextResponse>(`/api/assessment/${sessionId}/next`, body, options);
+      const promise = run().finally(() => {
+        if (inFlight.current === promise) inFlight.current = null;
+      });
+      inFlight.current = promise;
+      return promise;
+    },
+    [sessionId],
+  );
 
   const applyNext = useCallback(
     (data: NextResponse) => {
@@ -304,7 +276,8 @@ export function AssessmentRunner({
     if (phase.name !== "error") return;
     setPhase({ name: "loading", kind: "NEXT" });
     // Re-asking /next safely resumes: an unanswered question is returned, an answered one is not repeated.
-    void showNext();
+    // Check first: a question the server already saved is shown, never generated again.
+    void requestNext({ checkFirst: true }).then(applyNext, applyFailure);
   }
 
   const current = phase.name === "question" || phase.name === "feedback" ? (phase.progress.fixedTotal ? phase.question.position : phase.question.sequence) : null;

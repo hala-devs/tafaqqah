@@ -6,7 +6,8 @@ import { produceValidatedQuestion, type PipelineResult } from "@/server/ai/pipel
 import type { AIProvider } from "@/server/ai/provider";
 import type { AdaptiveStage } from "@/server/ai/types";
 import { assertLessonAccessible } from "@/server/content/study";
-import { AppError } from "@/server/errors";
+import { AppError, isAppError } from "@/server/errors";
+import { finishGenerationRequest, startGenerationRequest } from "@/server/ai/log";
 import { MASTERY_LEVEL_META, type MasteryLevel } from "@/lib/mastery-levels";
 import { approvedVideo, type ApprovedVideo } from "@/lib/video";
 import {
@@ -53,11 +54,18 @@ export type NextResult =
   | { kind: "question"; question: PublicQuestion; progress: SessionProgress }
   | { kind: "review"; review: ReviewStep; progress: SessionProgress }
   | { kind: "completed" }
-  | { kind: "pending" };
+  | { kind: "pending" }
+  /** Peek only: nothing is waiting and nothing is being prepared — the caller may start a real request. */
+  | { kind: "none" };
 
 export type NextOptions = {
   /** The learner pressed «اختبر فهمي مرة أخرى» after the review step. */
   reviewed?: boolean;
+  /**
+   * Read-only reconciliation: returns the already-persisted unanswered question, «pending» while another request holds
+   * the generation lock, or «none». Never generates, never serves a new bank question, never changes the session.
+   */
+  peek?: boolean;
 };
 
 export type AnswerResult = {
@@ -461,6 +469,38 @@ async function generateFollowUp(
   input: { stage: AdaptiveStage; previous: Served | null; concept: { id: string; title: string }; trace?: Record<string, unknown> },
 ): Promise<Generated> {
   const { db } = deps;
+  const tracking = await startGenerationRequest(db, {
+    sessionId: session.id,
+    userId: session.userId,
+    stage: input.stage,
+    conceptId: input.concept.id,
+    previousQuestionId: input.previous?.id ?? null,
+  });
+  try {
+    const generated = await runFollowUp(deps, session, state, input);
+    await finishGenerationRequest(
+      db,
+      tracking,
+      generated.kind === "VALID"
+        ? { status: "SUCCESS", questionId: generated.question.id }
+        : { status: generated.reason === "REPEATED_REJECTION" ? "REJECTED" : "INSUFFICIENT_SOURCE", errorCode: generated.reason, details: { conceptSkipped: true } },
+    );
+    return generated;
+  } catch (error) {
+    const code = isAppError(error) ? error.code : "INTERNAL";
+    const status = code === "GENERATION_FAILED" ? "REJECTED" : code.startsWith("AI_") && code !== "AI_TIMEOUT" ? "PROVIDER_ERROR" : "FAILED";
+    await finishGenerationRequest(db, tracking, { status, errorCode: code });
+    throw error;
+  }
+}
+
+async function runFollowUp(
+  deps: EngineDeps,
+  session: LoadedSession,
+  state: SessionState,
+  input: { stage: AdaptiveStage; previous: Served | null; concept: { id: string; title: string }; trace?: Record<string, unknown> },
+): Promise<Generated> {
+  const { db } = deps;
   const provider = (deps.getProvider ?? getAIProvider)();
   await assertWithinRateLimit(db, session.userId);
 
@@ -540,6 +580,7 @@ export async function getNextQuestion(
   const state = await loadState(deps, session);
   const pending = state.served.find((q) => !q.answer);
   if (pending) return { kind: "question", question: toPublic(pending, null, state.served), progress: state.progress };
+  if (options.peek) return session.generationLockUntil && session.generationLockUntil > new Date() ? { kind: "pending" } : { kind: "none" };
 
   const decision = decide(session, state);
   if (decision.complete) {

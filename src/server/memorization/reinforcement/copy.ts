@@ -85,6 +85,12 @@ export const EXERCISE_TITLE: Record<ExerciseType, string> = {
   LINKED_SEQUENCE_RECALL: "أسطر متتالية",
 };
 
+/** Guided-recall prompts: what the learner is asked when the card shows a cue instead of the instruction above. */
+export const GUIDED_INSTRUCTION = {
+  NEXT_LINE: "ما النص الذي يأتي بعده؟",
+  COMPLETE_LINE: "أكمل السطر من بدايته الظاهرة.",
+} as const;
+
 export function exerciseInstruction(type: ExerciseType, hiddenWords: number): string {
   const one = hiddenWords === 1;
   switch (type) {

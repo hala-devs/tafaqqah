@@ -13,6 +13,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ ses
     const user = await requireApiLearner();
     const sessionId = parseWith(sessionIdParam, (await params).sessionId);
     const body = parseWith(nextQuestionBody, await readJson(request));
-    return getNextQuestion({ db: prisma }, user.id, sessionId, { reviewed: body.reviewed });
+    return getNextQuestion({ db: prisma }, user.id, sessionId, { reviewed: body.reviewed, peek: body.peek });
   });
 }
