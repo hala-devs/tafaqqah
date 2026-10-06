@@ -281,14 +281,14 @@ export default async function LandingPage() {
           <div className="animate-fade-up">
             <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-caption text-muted">
               <span className="size-1.5 rounded-full bg-gold" aria-hidden />
-              رحلة متدرجة في الفقه الحنبلي
+              منصة تعليمية متخصصة في الفقه الحنبلي
             </p>
             <h1 className="mt-6 text-display-sm font-semibold text-ink sm:text-display">
-              تعلّم الفقه بفهمٍ متدرّج،
-              <br className="hidden sm:block" /> وثبّت علمك بالمراجعة والحفظ.
+              تعلّم الفقه الحنبلي بفهمٍ أعمق،
+              <br className="hidden sm:block" /> ومراجعةٍ أذكى.
             </h1>
             <p className="mt-6 max-w-xl text-card leading-9 text-muted">
-              ادرس من المحتوى العلمي المعتمد، اختبر فهمك باختبارات تكيفية، وارجع إلى موضع الشرح الذي تحتاجه حتى تتقنه.
+              تفقّه تجربة تعليمية متخصصة في الفقه الحنبلي، تجمع بين الفهم وحفظ المتن والمراجعة التكيفية، ضمن محتوى علمي موثّق ومعتمد، مع توظيف الذكاء الاصطناعي أداةً مساندة للتعلّم لا مصدرًا للأحكام.
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <ButtonLink href={primary.href} size="lg" iconAfter={<ArrowLeft className="size-4" aria-hidden />}>
@@ -477,7 +477,7 @@ export default async function LandingPage() {
               <h2 id="trust-title" className="mt-6 font-naskh text-quote font-semibold text-ink sm:text-quote-lg">
                 المصدر يحدد المعلومة الفقهية،
                 <br />
-                والذكاء الاصطناعي يخصص اختبار فهمها.
+                والذكاء الاصطناعي أداة مساندة تخصّص اختبار فهمها.
               </h2>
               <span aria-hidden className="mx-auto mt-6 block h-px w-20 bg-gold/70" />
             </div>
@@ -503,7 +503,7 @@ export default async function LandingPage() {
         {/* 7 — Learning path */}
         <section id="path" aria-labelledby="path-title" className="scroll-mt-6 py-20 lg:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <SectionHeader id="path-title" title="المسار العلمي في تفقّه" text="تعلّم متدرّج يبدأ من المستوى الأول، مع بناء الفهم خطوة بخطوة." />
+            <SectionHeader id="path-title" title="المسار العلمي في تفقّه" text="مسار متدرّج في الفقه الحنبلي يبدأ من المستوى الأول، مع بناء الفهم خطوة بخطوة." />
             <div className="mt-12 grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
               <article className="rounded-2xl border border-line bg-surface p-7 shadow-soft sm:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -550,7 +550,7 @@ export default async function LandingPage() {
           <div className="rounded-2xl border border-line bg-surface p-8 text-center shadow-soft sm:p-12">
             <Logo className="mx-auto justify-center" imageClassName="w-20" />
             <h2 id="cta-title" className="mt-6 text-title text-ink">
-              ابدأ رحلتك في تعلّم الفقه
+              ابدأ رحلتك في تعلّم الفقه الحنبلي
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-muted">تعلّم، اختبر فهمك، راجع موضع ضعفك، وثبّت ما تعلمته.</p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -570,7 +570,7 @@ export default async function LandingPage() {
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div>
               <Logo />
-              <p className="mt-3 text-small text-muted">رحلة متدرجة لفهم الفقه وتثبيت العلم.</p>
+              <p className="mt-3 text-small text-muted">رحلة متدرجة لفهم الفقه الحنبلي وتثبيت العلم.</p>
             </div>
             <nav aria-label="روابط التذييل">
               <ul className="flex flex-wrap gap-x-1 gap-y-1 text-small">
