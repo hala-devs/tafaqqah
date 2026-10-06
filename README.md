@@ -1,5 +1,4 @@
 # تفقّه | Tafaqqah
-
 **Source-grounded learning, assessment, and memorization for structured Hanbali fiqh study.**
 
 Tafaqqah helps learners study approved lesson content, check their understanding, revisit weak concepts at linked source segments, and memorize approved matn units. AI operates only inside server-enforced source, validation, and fallback boundaries; it does not issue fatwas, select sources, approve content, grade answers, or decide mastery.
@@ -10,10 +9,13 @@ Tafaqqah helps learners study approved lesson content, check their understanding
 
 ### Judge Admin Access
 
-- Email: `judge.admin@tafaqqah.app`
-- Password: **Provided in the judging presentation**
+A dedicated demo account is available for the judging committee.
 
-This project-owner-provided account is for the deployed judge admin console. It is an application administrator account only; it does not provide infrastructure, database, source-control, or AI-provider access.
+- **Admin URL:** <https://tafaqqah.onrender.com/admin>
+- **Email:** `judge.admin@tafaqqah.app`
+- **Password:** `Admin@#@1239`
+
+This is a dedicated judging/demo account for the deployed admin console. It does not provide infrastructure, database, source-control, or AI-provider access.
 
 ## Judge Quick Start
 
