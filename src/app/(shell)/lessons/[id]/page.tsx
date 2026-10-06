@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { ArrowDown, CheckCircle2, ChevronLeft, Hourglass, Lock, Target } from "lucide-react";
 import { requireUser } from "@/server/auth/current-user";
 import { getLessonView } from "@/server/content/queries";
-import { SampleNotice } from "@/components/learning/sample-notice";
 import { StudyCompletion } from "@/components/learning/study-completion";
 import { AssessmentStage } from "@/components/learning/assessment-stage";
 import { ButtonLink } from "@/components/ui/button";
@@ -98,7 +97,6 @@ export default async function LessonPage({ params }: Props) {
               {lesson.estimatedMinutes ? <span>نحو {ar(lesson.estimatedMinutes)} دقائق قراءة</span> : null}
               {progress?.completedAt ? <span className="text-success-ink">✓ أتممت هذا الدرس</span> : studied ? <span className="text-success-ink">✓ أكملت مرحلة التعلّم</span> : null}
             </div>
-            {lesson.isSample ? <SampleNotice className="mt-6" /> : null}
           </header>
 
           {/* ── Objectives ── */}
