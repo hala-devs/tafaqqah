@@ -168,7 +168,7 @@ More: [docs/AI_ARCHITECTURE.md](docs/AI_ARCHITECTURE.md) · [docs/DEPLOYMENT.md]
 Requirements: Docker with Docker Compose.
 
 ```bash
-git clone <repo-url> Tafaqqah
+git clone https://github.com/hala-devs/tafaqqah.git Tafaqqah
 cd Tafaqqah
 cp .env.example .env          # Windows: copy .env.example .env
 # edit .env: POSTGRES_PASSWORD (required); GEMINI_API_KEY for real AI; ADMIN_EMAIL/ADMIN_PASSWORD for an admin account
@@ -187,13 +187,33 @@ Useful: `docker compose logs -f app` · `docker compose down` (keeps data) · `d
 
 ## Local development (without Docker)
 
+Requirements: Node.js ≥ 20.9 (22 recommended), npm, PostgreSQL 17.
+
 ```bash
 npm install                     # runs prisma generate
 cp .env.example .env            # set DATABASE_URL
-npx prisma migrate deploy
-npm run db:seed
-npm run dev
+npm run db:bootstrap            # prisma migrate deploy + idempotent seed of the learning path and approved content
+npm run dev                     # → http://localhost:3000
 ```
+
+`npm run db:bootstrap` is safe to run again: every record is upserted by a stable id, so content is never duplicated and accounts/learner data are never touched. Never use `prisma migrate reset` on a database you care about.
+
+## Dependencies
+
+Declared in [package.json](package.json) and pinned in [package-lock.json](package-lock.json) (`npm install` / `npm ci`).
+
+| Runtime | Purpose |
+|---|---|
+| `next` 16.3.8, `react` / `react-dom` 19.2.8 | web framework and UI |
+| `@prisma/client`, `@prisma/adapter-pg`, `pg` (Prisma 7.10) | PostgreSQL access |
+| `@google/genai` | Gemini provider (default AI) |
+| `@anthropic-ai/sdk` | optional Anthropic provider |
+| `zod` | validation of input and AI output |
+| `lucide-react` | icons |
+| `server-only` | keeps server modules (and keys) out of the browser bundle |
+
+Development: `prisma`, `typescript`, `tsx`, `eslint` + `eslint-config-next`, `tailwindcss` 4 + `@tailwindcss/postcss`, `vitest`, `@playwright/test`, `dotenv`, type packages.
+External services: PostgreSQL 17 (bundled in Docker Compose) and, optionally, a Gemini or Anthropic API key. Fonts are self-hosted; no font CDN is needed at runtime.
 
 ## Environment variables
 
@@ -261,6 +281,15 @@ tests/              Vitest unit & integration tests
 e2e/                Playwright end-to-end tests
 docs/               AI architecture, deployment, attribution
 ```
+
+## Submission links
+
+| | |
+|---|---|
+| Live Demo | [ADD AFTER DEPLOYMENT] |
+| Public GitHub | https://github.com/hala-devs/tafaqqah |
+| Demo Video | [ADD WHEN PUBLISHED] |
+| Presentation | [ADD WHEN PUBLISHED] |
 
 ## License
 
